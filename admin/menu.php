@@ -45,6 +45,16 @@ function pfb_register_admin_menu() {
         'pfb-entries',
         'pfb_render_entries'
     );
+
+      //SINGLE ENTRY VIEW (HIDDEN PAGE)
+    add_submenu_page(
+        null, // important (hidden)
+        'View Entry',
+        'View Entry',
+        'manage_options',
+        'pfb-entry-view',
+        'pfb_render_entry_view'
+    );
 }
 
 /* CALLBACKS */
@@ -59,4 +69,20 @@ function pfb_form_builder_page() {
 
 function pfb_render_entries() {
     include PFB_PATH . 'admin/entries.php';
+}
+
+
+function pfb_render_entry_view() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('You are not allowed to access this page.');
+    }
+
+    if (empty($_GET['entry_id'])) {
+        wp_die('Invalid entry ID.');
+    }
+
+    $entry_id = intval($_GET['entry_id']);
+
+    include PFB_PATH . 'admin/entry-view.php';
 }
