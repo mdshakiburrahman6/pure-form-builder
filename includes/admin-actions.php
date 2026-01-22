@@ -5,6 +5,7 @@ add_action('admin_post_pfb_save_form', 'pfb_handle_save_form');
 add_action('admin_post_pfb_add_field', 'pfb_handle_add_field');
 add_action('admin_post_pfb_delete_field', 'pfb_handle_delete_field');
 add_action('admin_post_pfb_delete_form', 'pfb_handle_delete_form');
+add_action('admin_post_pfb_export_entries', 'pfb_export_entries_csv');
 
 
 /* =========================
@@ -329,5 +330,64 @@ function pfb_handle_delete_form() {
     wp_redirect(
         admin_url('admin.php?page=pfb-forms&deleted=1')
     );
+    exit;
+}
+
+function pfb_export_entries_csv() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    global $wpdb;
+
+    $form_id = intval($_GET['form_id']);
+
+    $entries = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT e.id, e.created_at, u.user_login
+             FROM {$wpdb->prefix}pfb_entries e
+             LEFT JOIN {$wpdb->users} u ON e.user_id = u.ID
+             WHERE e.form_id = %d
+             ORDER BY e.id DESC",
+            $form_id
+        )
+    );
+
+    if (!$entries) {
+        wp_die('No entries found.');
+    }
+
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="form-' . $form_id . '-entries.csv"');
+
+    $output = fopen('php://output', 'w');
+
+    // CSV Header
+    fputcsv($output, ['Entry ID', 'User', 'Date', 'Field', 'Value']);
+
+    foreach ($entries as $entry) {
+
+        $meta = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT field_name, field_value 
+                 FROM {$wpdb->prefix}pfb_entry_meta 
+                 WHERE entry_id = %d",
+                $entry->id
+            )
+        );
+
+        foreach ($meta as $row) {
+            fputcsv($output, [
+                $entry->id,
+                $entry->user_login ?: 'Guest',
+                $entry->created_at,
+                $row->field_name,
+                $row->field_value
+            ]);
+        }
+    }
+
+    fclose($output);
     exit;
 }

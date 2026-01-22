@@ -24,22 +24,31 @@ if ($form_id) {
 <div class="wrap">
     <h1>Form Entries</h1>
 
-    <!-- Form Filter -->
-    <form method="get">
-        <input type="hidden" name="page" value="pfb-entries">
+    <div class="form-header" style="display: flex; justify-content:space-between">
+        <!-- Form Filter -->
+        <form method="get">
+            <input type="hidden" name="page" value="pfb-entries">
 
-        <select name="form_id">
-            <option value="">Select Form</option>
-            <?php foreach ($forms as $form): ?>
-                <option value="<?php echo esc_attr($form->id); ?>"
-                    <?php selected($form_id, $form->id); ?>>
-                    <?php echo esc_html($form->name); ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+            <select name="form_id">
+                <option value="">Select Form</option>
+                <?php foreach ($forms as $form): ?>
+                    <option value="<?php echo esc_attr($form->id); ?>"
+                        <?php selected($form_id, $form->id); ?>>
+                        <?php echo esc_html($form->name); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
 
-        <button class="button">Filter</button>
-    </form>
+            <button class="button">Filter</button>
+        </form>
+
+        <!-- Export CSV -->
+        <form method="get" action="<?php echo admin_url('admin-post.php'); ?>" style="display:inline-block;">
+            <input type="hidden" name="action" value="pfb_export_entries">
+            <input type="hidden" name="form_id" value="<?php echo esc_attr($form_id); ?>">
+            <button class="button button-primary">Export CSV</button>
+        </form>
+    </div>
 
     <?php if ($form_id && $entries): ?>
         <table class="widefat striped" style="margin-top:20px;">
