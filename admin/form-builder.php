@@ -284,6 +284,39 @@ if ($form_id) {
     <?php endif; ?>
 
    <script>
+
+    function renderConditionValues(selectEl) {
+    const container = document.getElementById('condition_values');
+    container.innerHTML = '';
+
+    const selected = selectEl.options[selectEl.selectedIndex];
+    const optionsData = selected.getAttribute('data-options');
+    if (!optionsData) return;
+
+        let options = JSON.parse(optionsData);
+
+        const selectedValues = existingRules?.show_if?.values || [];
+
+        options.forEach(opt => {
+            const label = document.createElement('label');
+            label.style.display = 'block';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.name = 'condition_values[]';
+            checkbox.value = opt;
+
+            // IMPORTANT PART
+            if (selectedValues.includes(opt)) {
+                checkbox.checked = true;
+            }
+
+            label.appendChild(checkbox);
+            label.append(' ' + opt);
+            container.appendChild(label);
+        });
+    }
+
         const enableCondition = document.getElementById('enable_condition');
         const conditionBox   = document.getElementById('condition_box');
 
@@ -295,7 +328,7 @@ if ($form_id) {
             conditionBox.style.display = this.checked ? 'block' : 'none';
         });
 
-
+/*
         document.getElementById('condition_field')?.addEventListener('change', function () {
 
             const container = document.getElementById('condition_values');
@@ -328,6 +361,12 @@ if ($form_id) {
                 container.appendChild(label);
             });
         });
+*/
+        const conditionField = document.getElementById('condition_field');
+
+        conditionField?.addEventListener('change', function () {
+            renderConditionValues(this);
+        });
 
 
         <?php if (!empty($edit_field->rules)): ?>
@@ -349,6 +388,11 @@ if ($form_id) {
             document.getElementById('condition_field')?.dispatchEvent(event);
         }
 
+
+        if (enableCondition && enableCondition.checked && conditionField?.value) {
+            conditionBox.style.display = 'block';
+            renderConditionValues(conditionField);
+        }
 
     </script>
 
