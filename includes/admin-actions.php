@@ -23,7 +23,7 @@ function pfb_handle_save_form() {
 
     if ($form_id) {
         $wpdb->update($table, ['name' => $name], ['id' => $form_id]);
-    } else {
+    } else {    
         $wpdb->insert($table, ['name' => $name]);
         $form_id = $wpdb->insert_id;
     }
@@ -52,6 +52,9 @@ function pfb_handle_add_field() {
     $field_table = $wpdb->prefix . 'pfb_fields';
 
     $form_id = intval($_POST['form_id']);
+    $required = isset($_POST['field_required']) ? 1 : 0;
+
+
 
     // Conditional rules
     $rules = null;
@@ -102,16 +105,25 @@ function pfb_handle_add_field() {
         }
     }
 
+    $field_name_raw = $_POST['field_name'] ?? '';
+
+    if (!preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $field_name_raw)) {
+        wp_die('Invalid field name. Use only letters, numbers, underscore.');
+    }
+
+    $field_name = strtolower($field_name_raw);
+
 
 
     $data = [
         'form_id'    => $form_id,
         'type'       => sanitize_text_field($_POST['field_type']),
         'label'      => sanitize_text_field($_POST['field_label']),
-        'name'       => sanitize_key($_POST['field_name']),
+        'name' => $field_name,
         'options'    => wp_json_encode(
             array_map('trim', explode(',', $_POST['field_options']))
         ),
+        'required'   => $required,
         'rules'      => $rules,
         'sort_order' => 0
     ];

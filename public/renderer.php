@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) exit;
 global $wpdb;
 
 /**
- * $id shortcode থেকে আসছে
+ * $id shortcode 
  * [pfb_form id="2"]
  */
 $fields = $wpdb->get_results(
@@ -21,7 +21,7 @@ $fields = $wpdb->get_results(
 <form class="pfb-form">
 
 <?php foreach ($fields as $f): ?>
-    <div class="pfb-field" style="display:none;"
+    <div class="pfb-field"
          <?php if (!empty($f->rules)): ?>
             data-conditions='<?php echo esc_attr($f->rules); ?>'
          <?php endif; ?>
@@ -112,64 +112,76 @@ $fields = $wpdb->get_results(
 
 
 <script>
-    function getFormData(form) {
-        const data = {};
-        form.querySelectorAll('[name]').forEach(el => {
-            if (el.type === 'radio') {
-                if (el.checked) data[el.name] = el.value;
+function getFormData(form) {
+    const data = {};
+    form.querySelectorAll('[name]').forEach(el => {
+        if (el.type === 'radio') {
+            if (el.checked) data[el.name] = el.value;
+        } else {
+            data[el.name] = el.value;
+        }
+    });
+    return data;
+}
+
+function evaluateRules(ruleGroups, formData) {
+    return ruleGroups.some(group => {
+        return group.rules.every(rule => {
+            const currentValue = formData[rule.field] ?? '';
+
+            if (currentValue === '') return false;
+
+            if (rule.operator === 'is') {
+                return currentValue === rule.value;
+            }
+
+            if (rule.operator === 'is_not') {
+                return currentValue !== rule.value;
+            }
+
+            return false;
+        });
+    });
+}
+
+function applyConditions() {
+    const form = document.querySelector('.pfb-form');
+    if (!form) return;
+
+    const formData = getFormData(form);
+
+    document.querySelectorAll('.pfb-field').forEach(field => {
+
+        // No conditional logic → always visible
+        if (!field.dataset.conditions) {
+            field.style.display = '';
+            return;
+        }
+
+        const rules = JSON.parse(field.dataset.conditions);
+        const shouldShow = evaluateRules(rules, formData);
+
+        field.style.display = shouldShow ? '' : 'none';
+
+        // prevent hidden required bug
+        field.querySelectorAll('input, select, textarea').forEach(el => {
+            if (!el.dataset.wasRequired) {
+                el.dataset.wasRequired = el.required ? '1' : '0';
+            }
+
+            if (shouldShow) {
+                el.disabled = false;
+                el.required = el.dataset.wasRequired === '1';
             } else {
-                data[el.name] = el.value;
+                el.disabled = true;
+                el.required = false;
             }
         });
-        return data;
-    }
+    });
+}
 
-    function evaluateRules(ruleGroups, formData) {
-        return ruleGroups.some(group => {
-            return group.rules.every(rule => {
-                const currentValue = formData[rule.field] ?? '';
-
-                if (currentValue === '') {
-                    return false;
-                }
-
-                if (rule.operator === 'is') {
-                    return currentValue === rule.value;
-                }
-
-                if (rule.operator === 'is_not') {
-                    return currentValue !== rule.value;
-                }
-
-                return false;
-            });
-        });
-    }
-
-
-    function applyConditions() {
-        const form = document.querySelector('.pfb-form');
-        if (!form) return;
-
-        const formData = getFormData(form);
-
-        document.querySelectorAll('.pfb-field[data-conditions]').forEach(field => {
-            const rules = JSON.parse(field.dataset.conditions);
-            const shouldShow = evaluateRules(rules, formData);
-
-            field.style.display = shouldShow ? '' : 'none';
-
-            // CRITICAL FIX — hidden field submit বন্ধ
-            field.querySelectorAll('input, select, textarea').forEach(el => {
-                el.disabled = !shouldShow;
-            });
-        });
-    }
-
-
-
-    // Change + initial load
-    document.addEventListener('change', applyConditions);
-    document.addEventListener('DOMContentLoaded', applyConditions);
+document.addEventListener('DOMContentLoaded', applyConditions);
+document.addEventListener('change', applyConditions);
 </script>
+
 

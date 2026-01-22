@@ -203,9 +203,21 @@ if ($form_id) {
                             name="field_name"
                             value="<?php echo esc_attr($edit_field->name ?? ''); ?>"
                             required>
-                        <p class="description">example: driver_name</p>
+                        <p class="description">Example: driver_name</p>
                     </td>
                 </tr>
+
+                <tr>
+                    <th>Required</th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="field_required"
+                            <?php checked(!empty($edit_field->required)); ?>>
+                                This field is required
+                        </label>
+                    </td>
+                </tr>
+
 
                 <tr>
                     <th>Options (for select)</th>
@@ -219,7 +231,6 @@ if ($form_id) {
 
                     </td>
                 </tr>
-
 
                 <tr>
                     <th>Conditional Logic</th>
@@ -252,7 +263,6 @@ if ($form_id) {
                         </div>
                     </td>
                 </tr>
-
 
 
             </table>
