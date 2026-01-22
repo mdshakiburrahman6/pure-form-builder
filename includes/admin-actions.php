@@ -4,6 +4,8 @@ if (!defined('ABSPATH')) exit;
 add_action('admin_post_pfb_save_form', 'pfb_handle_save_form');
 add_action('admin_post_pfb_add_field', 'pfb_handle_add_field');
 add_action('admin_post_pfb_delete_field', 'pfb_handle_delete_field');
+add_action('admin_post_pfb_delete_form', 'pfb_handle_delete_form');
+
 
 /* =========================
    SAVE / UPDATE FORM
@@ -175,6 +177,157 @@ function pfb_handle_delete_field() {
 
     wp_redirect(
         admin_url('admin.php?page=pfb-builder&form_id=' . $form_id . '&field_deleted=1')
+    );
+    exit;
+}
+
+
+
+
+add_action('admin_post_nopriv_pfb_submit_form', 'pfb_handle_form_submit');
+add_action('admin_post_pfb_submit_form', 'pfb_handle_form_submit');
+function pfb_handle_form_submit() {
+    global $wpdb;
+
+    $form_id = intval($_POST['pfb_form_id'] ?? 0);
+    if (!$form_id) wp_die('Invalid form');
+
+    $user_id = is_user_logged_in() ? get_current_user_id() : null;
+
+    $fields = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}pfb_fields WHERE form_id=%d",
+            $form_id
+        )
+    );
+
+    $errors = [];
+
+    /* ========= REQUIRED CHECK ========= */
+    foreach ($fields as $f) {
+
+        // file / image
+        if (in_array($f->type, ['file','image'])) {
+            if (!empty($f->required) && empty($_FILES[$f->name]['name'])) {
+                $errors[] = $f->label . ' is required';
+            }
+            continue;
+        }
+
+        if (!isset($_POST[$f->name])) {
+            if (!empty($f->required)) {
+                $errors[] = $f->label . ' is required';
+            }
+            continue;
+        }
+
+        if (!empty($f->required) && trim($_POST[$f->name]) === '') {
+            $errors[] = $f->label . ' is required';
+        }
+    }
+
+    if ($errors) {
+        wp_die(implode('<br>', $errors));
+    }
+
+    /* ========= CREATE ENTRY ========= */
+    $wpdb->insert(
+        $wpdb->prefix . 'pfb_entries',
+        [
+            'form_id' => $form_id,
+            'user_id' => $user_id
+        ]
+    );
+
+    $entry_id = $wpdb->insert_id;
+
+    /* ========= SAVE META ========= */
+    foreach ($fields as $f) {
+
+        // FILE / IMAGE
+        if (in_array($f->type, ['file','image']) && !empty($_FILES[$f->name]['name'])) {
+
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            $upload = wp_handle_upload($_FILES[$f->name], ['test_form' => false]);
+
+            if (!empty($upload['url'])) {
+                $wpdb->insert(
+                    $wpdb->prefix . 'pfb_entry_meta',
+                    [
+                        'entry_id'   => $entry_id,
+                        'field_name' => $f->name,
+                        'field_value'=> esc_url_raw($upload['url'])
+                    ]
+                );
+            }
+            continue;
+        }
+
+        // NORMAL FIELD
+        if (isset($_POST[$f->name])) {
+            $wpdb->insert(
+                $wpdb->prefix . 'pfb_entry_meta',
+                [
+                    'entry_id'   => $entry_id,
+                    'field_name' => $f->name,
+                    'field_value'=> sanitize_text_field($_POST[$f->name])
+                ]
+            );
+        }
+    }
+
+    wp_redirect(add_query_arg('submitted', '1', wp_get_referer()));
+    exit;
+}
+
+
+
+function pfb_handle_delete_form() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    $form_id = isset($_GET['form_id']) ? intval($_GET['form_id']) : 0;
+
+    if (!$form_id) {
+        wp_die('Invalid form ID');
+    }
+
+    check_admin_referer('pfb_delete_form_' . $form_id);
+
+    global $wpdb;
+
+    $forms_table       = $wpdb->prefix . 'pfb_forms';
+    $fields_table      = $wpdb->prefix . 'pfb_fields';
+    $entries_table     = $wpdb->prefix . 'pfb_entries';
+    $entry_meta_table  = $wpdb->prefix . 'pfb_entry_meta';
+
+    // 1️. Get entry IDs first
+    $entry_ids = $wpdb->get_col(
+        $wpdb->prepare(
+            "SELECT id FROM $entries_table WHERE form_id = %d",
+            $form_id
+        )
+    );
+
+    // 2️. Delete entry meta
+    if (!empty($entry_ids)) {
+        $in = implode(',', array_map('intval', $entry_ids));
+        $wpdb->query("DELETE FROM $entry_meta_table WHERE entry_id IN ($in)");
+    }
+
+    // 3️. Delete entries
+    $wpdb->delete($entries_table, ['form_id' => $form_id]);
+
+    // 4️. Delete fields
+    $wpdb->delete($fields_table, ['form_id' => $form_id]);
+
+    // 5. Delete form
+    $wpdb->delete($forms_table, ['id' => $form_id]);
+
+    wp_redirect(
+        admin_url('admin.php?page=pfb-forms&deleted=1')
     );
     exit;
 }

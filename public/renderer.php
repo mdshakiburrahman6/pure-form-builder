@@ -18,94 +18,109 @@ $fields = $wpdb->get_results(
 );
 ?>
 
-<form class="pfb-form">
+<form class="pfb-form"
+      method="post"
+      action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+      enctype="multipart/form-data">
 
-<?php foreach ($fields as $f): ?>
-    <div class="pfb-field"
-         <?php if (!empty($f->rules)): ?>
-            data-conditions='<?php echo esc_attr($f->rules); ?>'
-         <?php endif; ?>
-    >
 
-        <label><?php echo esc_html($f->label); ?></label>
+    <input type="hidden" name="action" value="pfb_submit_form">
+    <input type="hidden" name="pfb_form_id" value="<?php echo esc_attr($id); ?>">
 
-       <?php
-            switch ($f->type) {
 
-                case 'text':
-                case 'email':
-                case 'number':
-                case 'url':
-                    ?>
-                    <input
-                        type="<?php echo esc_attr($f->type); ?>"
-                        name="<?php echo esc_attr($f->name); ?>"
-                    >
-                    <?php
-                    break;
+    <?php foreach ($fields as $f): ?>
+        <div class="pfb-field"
+            <?php if (!empty($f->rules)): ?>
+                data-conditions='<?php echo esc_attr($f->rules); ?>'
+            <?php endif; ?>
+        >
 
-                case 'textarea':
-                    ?>
-                    <textarea name="<?php echo esc_attr($f->name); ?>"></textarea>
-                    <?php
-                    break;
+            <label><?php echo esc_html($f->label); ?></label>
 
-                case 'select':
-                    $options = json_decode($f->options, true) ?: [];
-                    ?>
-                    <select name="<?php echo esc_attr($f->name); ?>">
-                        <option value="">Select</option>
-                        <?php foreach ($options as $opt): ?>
-                            <option value="<?php echo esc_attr($opt); ?>">
+        <?php
+                switch ($f->type) {
+
+                    case 'text':
+                    case 'email':
+                    case 'number':
+                    case 'url':
+                        ?>
+                        <input
+                            type="<?php echo esc_attr($f->type); ?>"
+                            name="<?php echo esc_attr($f->name); ?>"
+                            <?php echo !empty($f->required) ? 'required' : ''; ?>
+                        >
+                        <?php
+                        break;
+
+                    case 'textarea':
+                        ?>
+                        <textarea 
+                            name="<?php echo esc_attr($f->name); ?>" 
+                            <?php echo !empty($f->required) ? 'required' : ''; ?>
+                        ></textarea>
+                        <?php
+                        break;
+
+                    case 'select':
+                        $options = json_decode($f->options, true) ?: [];
+                        ?>
+                        <select name="<?php echo esc_attr($f->name); ?>" <?php echo !empty($f->required) ? 'required' : ''; ?>>
+                            <option value="">Select</option>
+                            <?php foreach ($options as $opt): ?>
+                                <option value="<?php echo esc_attr($opt); ?>">
+                                    <?php echo esc_html($opt); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php
+                        break;
+
+                    case 'radio':
+                        $options = json_decode($f->options, true) ?: [];
+                        foreach ($options as $opt):
+                        ?>
+                            <label style="display:block;">
+                                <input
+                                    type="radio"
+                                    name="<?php echo esc_attr($f->name); ?>"
+                                    value="<?php echo esc_attr($opt); ?>"
+                                    <?php echo !empty($f->required) ? 'required' : ''; ?>
+                                >
                                 <?php echo esc_html($opt); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?php
-                    break;
+                            </label>
+                        <?php
+                        endforeach;
+                        break;
 
-                case 'radio':
-                    $options = json_decode($f->options, true) ?: [];
-                    foreach ($options as $opt):
-                    ?>
-                        <label style="display:block;">
-                            <input
-                                type="radio"
-                                name="<?php echo esc_attr($f->name); ?>"
-                                value="<?php echo esc_attr($opt); ?>"
-                            >
-                            <?php echo esc_html($opt); ?>
-                        </label>
-                    <?php
-                    endforeach;
-                    break;
+                    case 'file':
+                        ?>
+                        <input
+                            type="file"
+                            name="<?php echo esc_attr($f->name); ?>"
+                            <?php echo !empty($f->required) ? 'required' : ''; ?>
+                        >
+                        <?php
+                        break;
 
-                case 'file':
-                    ?>
-                    <input
-                        type="file"
-                        name="<?php echo esc_attr($f->name); ?>"
-                    >
-                    <?php
-                    break;
-
-                case 'image':
-                    ?>
-                    <input
-                        type="file"
-                        accept="image/*"
-                        name="<?php echo esc_attr($f->name); ?>"
-                    >
-                    <?php
-                    break;
-            }
-            ?>
+                    case 'image':
+                        ?>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            name="<?php echo esc_attr($f->name); ?>"
+                            <?php echo !empty($f->required) ? 'required' : ''; ?>
+                        >
+                        <?php
+                        break;
+                }
+                ?>
 
 
-    </div>
-<?php endforeach; ?>
+        </div>
+    <?php endforeach; ?>
 
-<button type="submit">Submit</button>
+    <button type="submit">Submit</button>
 </form>
 
 

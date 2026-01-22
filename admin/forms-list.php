@@ -37,12 +37,20 @@ $forms = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC");
                             <code>[pfb_form id="<?php echo $form->id; ?>"]</code>
                         </td>
                         <td>
-                            <a href="<?php echo admin_url(
-                                'admin.php?page=pfb-builder&form_id=' . $form->id
-                            ); ?>">
+                            <a href="<?php echo admin_url('admin.php?page=pfb-builder&form_id=' . $form->id); ?>">
                                 Edit
                             </a>
+                            |
+                            <a href="<?php echo wp_nonce_url(
+                                admin_url('admin-post.php?action=pfb_delete_form&form_id=' . $form->id),
+                                'pfb_delete_form_' . $form->id
+                            ); ?>"
+                            onclick="return confirm('Are you sure you want to delete this form?');"
+                            style="color:red;">
+                                Delete
+                            </a>
                         </td>
+
                     </tr>
                 <?php endforeach; ?>
             </tbody>
