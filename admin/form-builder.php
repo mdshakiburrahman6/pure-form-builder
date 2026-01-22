@@ -36,6 +36,14 @@ if ($edit_field_id) {
     );
 }
 
+$all_fields = $wpdb->get_results(
+    $wpdb->prepare(
+        "SELECT name, label, type, options FROM {$wpdb->prefix}pfb_fields WHERE form_id=%d",
+        $form_id
+    )
+);
+
+
 if ($form_id) {
     $fields = $wpdb->get_results(
         $wpdb->prepare(
@@ -164,10 +172,16 @@ if ($form_id) {
                     <th>Field Type</th>
                     <td>
                         <select name="field_type">
-                            <option value="text" <?php selected($edit_field->type ?? '', 'text'); ?>>Text</option>
-                            <option value="select" <?php selected($edit_field->type ?? '', 'select'); ?>>Select</option>
+                            <option value="text">Text</option>
+                            <option value="textarea">Textarea</option>
+                            <option value="email">Email</option>
+                            <option value="number">Number</option>
+                            <option value="url">URL</option>
+                            <option value="select">Select</option>
+                            <option value="radio">Radio</option>
+                            <option value="file">File</option>
+                            <option value="image">Image</option>
                         </select>
-
                     </td>
                 </tr>
 
@@ -210,71 +224,35 @@ if ($form_id) {
                 <tr>
                     <th>Conditional Logic</th>
                     <td>
-                        <label>
-                            <input type="checkbox"
-                                id="enable_condition"
-                                <?php echo (!empty($edit_field->rules)) ? 'checked' : ''; ?>>
 
+                        <label style="display:block; margin-bottom:10px;">
+                            <input type="checkbox" id="enable_condition"
+                                <?php echo (!empty($edit_field->rules)) ? 'checked' : ''; ?>>
+                            Enable Conditional Logic
                         </label>
 
-                        <div id="condition_box" style="display:none; margin-top:10px;">
+                        <div id="condition_builder" style="display:none; border-left:3px solid #2271b1; padding-left:15px;">
 
-                            <p>
-                                Show this field if
-                                <select name="condition_field" id="condition_field">
-                                    <option value="">Select field</option>
-                                    <?php
-                                    // existing fields for this form
-                                   $all_fields = $wpdb->get_results(
-                                        $wpdb->prepare(
-                                            "SELECT name, label, type, options 
-                                            FROM {$wpdb->prefix}pfb_fields 
-                                            WHERE form_id=%d",
-                                            $form_id
-                                        )
-                                    );
+                            <div id="rule_groups">
 
+                                <!-- Rule Group Template -->
+                             
 
-                                    foreach ($all_fields as $af):
-                                        if ($af->type === 'select'):
-                                    ?>
-                                        <option
-                                            value="<?php echo esc_attr($af->name); ?>"
-                                            data-options='<?php echo esc_attr($af->options); ?>'
-                                            <?php
-                                                if (!empty($edit_field->rules)) {
-                                                    $rules = json_decode($edit_field->rules, true);
-                                                    if (($rules['show_if']['field'] ?? '') === $af->name) {
-                                                        echo 'selected';
-                                                    }
-                                                }
-                                            ?>
-                                        >
-                                            <?php echo esc_html($af->label); ?>
-                                        </option>
+                            </div>
 
-                                    <?php
-                                        endif;
-                                    endforeach;
-                                    ?>
-                                </select>
+                            <button type="button" class="button button-secondary" id="add_rule_group">
+                                + OR Rule Group
+                            </button>
 
-                                equals
-
-                                <!-- <select name="condition_value" id="condition_value"> -->
-                                <div id="condition_values" style="margin-top:8px;">
-                                    <!-- JS will populate checkboxes here -->
-                                </div>
-
+                            <p class="description" style="margin-top:10px;">
+                                Rules inside a group use <strong>AND</strong>.  
+                                Rule groups are evaluated using <strong>OR</strong>.
                             </p>
 
-                            <p class="description" style="margin-top:40px; max-width:650px;">
-                                Control when this field appears based on another field’s value. <br>
-                                Select one or more values to apply <strong>OR</strong> logic.
-                            </p>
                         </div>
                     </td>
                 </tr>
+
 
 
             </table>
@@ -283,118 +261,273 @@ if ($form_id) {
         </form>
     <?php endif; ?>
 
-   <script>
+    <script>
+        window.pfbSelectFields = `
+        <?php foreach ($all_fields as $af): ?>
+            <?php if (in_array($af->type, ['select','radio'])): ?>
+                <option value="<?php echo esc_attr($af->name); ?>">
+                    <?php echo esc_html($af->label); ?>
+                </option>
+            <?php endif; ?>
+        <?php endforeach; ?>
+        `;
+    </script>
 
-    function renderConditionValues(selectEl) {
-    const container = document.getElementById('condition_values');
-    container.innerHTML = '';
+    <script>
+        window.pfbFieldOptions = <?php
+            $field_options = [];
 
-    const selected = selectEl.options[selectEl.selectedIndex];
-    const optionsData = selected.getAttribute('data-options');
-    if (!optionsData) return;
-
-        let options = JSON.parse(optionsData);
-
-        const selectedValues = existingRules?.show_if?.values || [];
-
-        options.forEach(opt => {
-            const label = document.createElement('label');
-            label.style.display = 'block';
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.name = 'condition_values[]';
-            checkbox.value = opt;
-
-            // IMPORTANT PART
-            if (selectedValues.includes(opt)) {
-                checkbox.checked = true;
+            foreach ($all_fields as $af) {
+                if (in_array($af->type, ['select', 'radio']) && !empty($af->options)) {
+                    $decoded = json_decode($af->options, true);
+                    if (is_array($decoded)) {
+                        $field_options[$af->name] = $decoded;
+                    }
+                }
             }
 
-            label.appendChild(checkbox);
-            label.append(' ' + opt);
-            container.appendChild(label);
-        });
+            echo wp_json_encode($field_options);
+        ?>;
+    </script>
+
+    <script>
+        window.pfbExistingRules = <?php
+            if (!empty($edit_field->rules)) {
+                echo $edit_field->rules;
+            } else {
+                echo 'null';
+            }
+        ?>;
+    </script>
+
+
+
+   <script>
+    function renderValueInput(groupIndex, ruleIndex, fieldName, selectedValue = '') {
+
+        if (window.pfbFieldOptions[fieldName]) {
+            // SELECT dropdown
+            let optionsHTML = '<option value="">Select value</option>';
+
+            window.pfbFieldOptions[fieldName].forEach(opt => {
+                const selected = opt === selectedValue ? 'selected' : '';
+                optionsHTML += `<option value="${opt}" ${selected}>${opt}</option>`;
+            });
+
+            return `
+                <select name="rules[${groupIndex}][rules][${ruleIndex}][value]">
+                    ${optionsHTML}
+                </select>
+            `;
+        }
+
+        // Default text input
+        return `
+            <input type="text"
+                name="rules[${groupIndex}][rules][${ruleIndex}][value]"
+                value="${selectedValue || ''}"
+                placeholder="Value">
+        `;
     }
 
-        const enableCondition = document.getElementById('enable_condition');
-        const conditionBox   = document.getElementById('condition_box');
 
-        if (enableCondition && enableCondition.checked) {
-            conditionBox.style.display = 'block';
+    function createRuleHTML(groupIndex, ruleIndex, rule) {
+        return `
+            <div class="rule" style="margin-top:10px;">
+                <select name="rules[${groupIndex}][rules][${ruleIndex}][field]" class="rule-field">
+                    <option value="">Select field</option>
+                    ${window.pfbSelectFields || ''}
+                </select>
+
+                <select name="rules[${groupIndex}][rules][${ruleIndex}][operator]">
+                    <option value="is">is</option>
+                    <option value="is_not">is not</option>
+                </select>
+
+                ${renderValueInput(groupIndex, ruleIndex, rule?.field, rule?.value)}
+
+                <button type="button" class="button-link delete-rule">✕</button>
+            </div>
+        `;
+    }
+
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const enableCheckbox = document.getElementById('enable_condition');
+        const builder = document.getElementById('condition_builder');
+        const ruleGroups = document.getElementById('rule_groups');
+        const addGroupBtn = document.getElementById('add_rule_group');
+
+        /* ======================
+        Toggle Builder
+        ====================== */
+        if (enableCheckbox?.checked) {
+            builder.style.display = 'block';
         }
 
-        enableCondition?.addEventListener('change', function () {
-            conditionBox.style.display = this.checked ? 'block' : 'none';
+        enableCheckbox?.addEventListener('change', function () {
+            builder.style.display = this.checked ? 'block' : 'none';
         });
 
-/*
-        document.getElementById('condition_field')?.addEventListener('change', function () {
+        /* ======================
+        Add AND Rule
+        ====================== */
+        document.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('add-rule')) return;
 
-            const container = document.getElementById('condition_values');
-            container.innerHTML = '';
+            const group = e.target.closest('.rule-group');
+            const rulesBox = group.querySelector('.rules');
 
-            const selected = this.options[this.selectedIndex];
-            const optionsData = selected.getAttribute('data-options');
+            const groupIndex = [...ruleGroups.children].indexOf(group);
+            const ruleIndex = rulesBox.children.length;
 
-            if (!optionsData) return;
+            const ruleHTML = `
+                <div class="rule" style="margin-top:10px;">
+                    <select name="rules[${groupIndex}][rules][${ruleIndex}][field]" class="rule-field">
+                        <option value="">Select field</option>
+                        ${window.pfbSelectFields || ''}
+                    </select>
 
-            let options;
-            try {
-                options = JSON.parse(optionsData);
-            } catch (e) {
-                return;
+                    <select name="rules[${groupIndex}][rules][${ruleIndex}][operator]">
+                        <option value="is">is</option>
+                        <option value="is_not">is not</option>
+                    </select>
+
+                    ${renderValueInput(groupIndex, ruleIndex, '')}
+
+                    <button type="button" class="button-link delete-rule">✕</button>
+                </div>
+            `;
+
+            rulesBox.insertAdjacentHTML('beforeend', ruleHTML);
+        });
+
+        /* ======================
+        Add OR Rule Group
+        ====================== */
+        addGroupBtn?.addEventListener('click', function () {
+
+            const groupIndex = ruleGroups.children.length;
+
+            const groupHTML = `
+                <div class="rule-group" style="margin-bottom:20px; padding:10px; background:#f9f9f9;">
+                    <strong>Rule Group</strong>
+
+                    <div class="rules">
+                        <div class="rule" style="margin-top:10px;">
+                            <select name="rules[${groupIndex}][rules][0][field]" class="rule-field">
+                                <option value="">Select field</option>
+                                ${window.pfbSelectFields || ''}
+                            </select>
+
+                            <select name="rules[${groupIndex}][rules][0][operator]">
+                                <option value="is">is</option>
+                                <option value="is_not">is not</option>
+                            </select>
+
+                            ${renderValueInput(groupIndex, 0, '')}
+
+                        </div>
+                    </div>
+
+                    <button type="button" class="button add-rule" style="margin-top:10px;">
+                        + AND Rule
+                    </button>
+                </div>
+            `;
+
+            ruleGroups.insertAdjacentHTML('beforeend', groupHTML);
+        });
+
+        /* ======================
+        Delete Rule
+        ====================== */
+        document.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('delete-rule')) return;
+            e.target.closest('.rule').remove();
+        });
+
+
+
+        /* ======================
+        Edit Mode: Auto-load Rules
+        ====================== */
+        if (window.pfbExistingRules && Array.isArray(window.pfbExistingRules)) {
+
+            // Show builder automatically
+            if (enableCheckbox) {
+                enableCheckbox.checked = true;
+                builder.style.display = 'block';
             }
 
-            options.forEach(opt => {
-                const label = document.createElement('label');
-                label.style.display = 'block';
+            ruleGroups.innerHTML = '';
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'condition_values[]';
-                checkbox.value = opt;
+            window.pfbExistingRules.forEach((group, groupIndex) => {
 
-                label.appendChild(checkbox);
-                label.append(' ' + opt);
+                const groupHTML = document.createElement('div');
+                groupHTML.className = 'rule-group';
+                groupHTML.style.cssText = 'margin-bottom:20px; padding:10px; background:#f9f9f9;';
 
-                container.appendChild(label);
+                groupHTML.innerHTML = `
+                    <strong>Rule Group</strong>
+                    <div class="rules"></div>
+                    <button type="button" class="button add-rule" style="margin-top:10px;">
+                        + AND Rule
+                    </button>
+                `;
+
+                const rulesBox = groupHTML.querySelector('.rules');
+
+                group.rules.forEach((rule, ruleIndex) => {
+                    rulesBox.insertAdjacentHTML(
+                        'beforeend',
+                        createRuleHTML(groupIndex, ruleIndex, rule)
+                    );
+                });
+
+                ruleGroups.appendChild(groupHTML);
+
+                // Set values after render
+                group.rules.forEach((rule, ruleIndex) => {
+                    const ruleEl = rulesBox.children[ruleIndex];
+
+                    ruleEl.querySelector(
+                        `[name="rules[${groupIndex}][rules][${ruleIndex}][field]"]`
+                    ).value = rule.field;
+
+                    ruleEl.querySelector(
+                        `[name="rules[${groupIndex}][rules][${ruleIndex}][operator]"]`
+                    ).value = rule.operator;
+
+                    ruleEl.querySelector(
+                        `[name="rules[${groupIndex}][rules][${ruleIndex}][value]"]`
+                    ).value = rule.value;
+                });
+
             });
+        }
+
+        document.addEventListener('change', function (e) {
+            if (!e.target.classList.contains('rule-field')) return;
+
+            const rule = e.target.closest('.rule');
+            const rulesBox = rule.closest('.rules');
+            const groupIndex = [...document.querySelectorAll('.rule-group')]
+                .indexOf(rule.closest('.rule-group'));
+            const ruleIndex = [...rulesBox.children].indexOf(rule);
+
+            const oldValue = rule.querySelector('[name$="[value]"]')?.value || '';
+
+            rule.querySelector('[name$="[value]"]').outerHTML =
+                renderValueInput(groupIndex, ruleIndex, e.target.value, oldValue);
         });
-*/
-        const conditionField = document.getElementById('condition_field');
-
-        conditionField?.addEventListener('change', function () {
-            renderConditionValues(this);
-        });
 
 
-        <?php if (!empty($edit_field->rules)): ?>
-        const existingRules = <?php echo $edit_field->rules; ?>;
+    });
+</script>
 
-        if (existingRules?.show_if?.values) {
-            existingRules.show_if.values.forEach(val => {
-                const checkbox = document.querySelector(
-                    'input[name="condition_values[]"][value="' + val + '"]'
-                );
-                if (checkbox) checkbox.checked = true;
-            });
-        }
-        <?php endif; ?>
-
-        // Force trigger on load if editing
-        if (enableCondition && enableCondition.checked) {
-            const event = new Event('change');
-            document.getElementById('condition_field')?.dispatchEvent(event);
-        }
-
-
-        if (enableCondition && enableCondition.checked && conditionField?.value) {
-            conditionBox.style.display = 'block';
-            renderConditionValues(conditionField);
-        }
-
-    </script>
 
 
 

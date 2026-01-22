@@ -56,16 +56,52 @@ function pfb_handle_add_field() {
     // Conditional rules
     $rules = null;
 
-    if (!empty($_POST['condition_field']) && !empty($_POST['condition_values'])) {
-        $values = array_map('sanitize_text_field', $_POST['condition_values']);
+    // =========================
+    // RULE BUILDER SAVE
+    // =========================
+    $rules = null;
 
-        $rules = wp_json_encode([
-            'show_if' => [
-                'field'  => sanitize_key($_POST['condition_field']),
-                'values' => $values
-            ]
-        ]);
+    if (!empty($_POST['rules']) && is_array($_POST['rules'])) {
+
+        $clean_groups = [];
+
+        foreach ($_POST['rules'] as $group) {
+
+            if (empty($group['rules']) || !is_array($group['rules'])) {
+                continue;
+            }
+
+            $clean_rules = [];
+
+            foreach ($group['rules'] as $rule) {
+
+                if (
+                    empty($rule['field']) ||
+                    empty($rule['operator']) ||
+                    $rule['value'] === ''
+                ) {
+                    continue;
+                }
+
+                $clean_rules[] = [
+                    'field'    => sanitize_key($rule['field']),
+                    'operator' => sanitize_text_field($rule['operator']),
+                    'value'    => sanitize_text_field($rule['value']),
+                ];
+            }
+
+            if (!empty($clean_rules)) {
+                $clean_groups[] = [
+                    'rules' => $clean_rules
+                ];
+            }
+        }
+
+        if (!empty($clean_groups)) {
+            $rules = wp_json_encode($clean_groups);
+        }
     }
+
 
 
     $data = [
