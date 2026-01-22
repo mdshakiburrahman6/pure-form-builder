@@ -188,6 +188,14 @@ function pfb_handle_delete_field() {
 add_action('admin_post_nopriv_pfb_submit_form', 'pfb_handle_form_submit');
 add_action('admin_post_pfb_submit_form', 'pfb_handle_form_submit');
 function pfb_handle_form_submit() {
+
+    if (
+        !isset($_POST['pfb_nonce']) ||
+        !wp_verify_nonce($_POST['pfb_nonce'], 'pfb_frontend_submit')
+    ) {
+        wp_die('Security check failed');
+    }
+
     global $wpdb;
 
     $form_id = intval($_POST['pfb_form_id'] ?? 0);
@@ -354,6 +362,19 @@ function pfb_export_entries_csv() {
         )
     );
 
+    // STEP — collect all unique field names for this form
+    $all_fields = $wpdb->get_col(
+        $wpdb->prepare(
+            "SELECT DISTINCT em.field_name
+            FROM {$wpdb->prefix}pfb_entry_meta em
+            INNER JOIN {$wpdb->prefix}pfb_entries e ON em.entry_id = e.id
+            WHERE e.form_id = %d
+            ORDER BY em.field_name ASC",
+            $form_id
+        )
+    );
+
+
     if (!$entries) {
         wp_die('No entries found.');
     }
@@ -364,7 +385,13 @@ function pfb_export_entries_csv() {
     $output = fopen('php://output', 'w');
 
     // CSV Header
-    fputcsv($output, ['Entry ID', 'User', 'Date', 'Field', 'Value']);
+    $header = array_merge(
+        ['Entry ID', 'User', 'Date'],
+        $all_fields
+    );
+
+    fputcsv($output, $header);
+
 
     foreach ($entries as $entry) {
 
@@ -377,15 +404,23 @@ function pfb_export_entries_csv() {
             )
         );
 
-        foreach ($meta as $row) {
-            fputcsv($output, [
-                $entry->id,
-                $entry->user_login ?: 'Guest',
-                $entry->created_at,
-                $row->field_name,
-                $row->field_value
-            ]);
+        $row_data = [
+            $entry->id,
+            $entry->user_login ?: 'Guest',
+            $entry->created_at
+        ];
+
+        // prepare empty values
+        $values_map = array_fill_keys($all_fields, '');
+
+        // fill values
+        foreach ($meta as $m) {
+            $values_map[$m->field_name] = $m->field_value;
         }
+
+        // merge and export
+        fputcsv($output, array_merge($row_data, array_values($values_map)));
+
     }
 
     fclose($output);

@@ -27,6 +27,8 @@ $fields = $wpdb->get_results(
     <input type="hidden" name="action" value="pfb_submit_form">
     <input type="hidden" name="pfb_form_id" value="<?php echo esc_attr($id); ?>">
 
+    <?php wp_nonce_field('pfb_frontend_submit', 'pfb_nonce'); ?>
+
 
     <?php foreach ($fields as $f): ?>
         <div class="pfb-field"
