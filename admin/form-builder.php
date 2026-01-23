@@ -167,20 +167,34 @@ if ($form_id) {
                 <input type="hidden" name="field_id" value="<?php echo esc_attr($edit_field->id); ?>">
             <?php endif; ?>
 
+            <?php
+
+
+            $opts = [];
+
+            if (!empty($edit_field) && !empty($edit_field->options)) {
+                $decoded = json_decode($edit_field->options, true);
+                if (is_array($decoded)) {
+                    $opts = $decoded;
+                }
+            }
+
+            ?>
+
             <table class="form-table">
                 <tr>
                     <th>Field Type</th>
                     <td>
-                        <select name="field_type">
-                            <option value="text">Text</option>
-                            <option value="textarea">Textarea</option>
-                            <option value="email">Email</option>
-                            <option value="number">Number</option>
-                            <option value="url">URL</option>
-                            <option value="select">Select</option>
-                            <option value="radio">Radio</option>
-                            <option value="file">File</option>
-                            <option value="image">Image</option>
+                        <select name="field_type" id="pfb-field-type">
+                            <option value="text" <?php selected($edit_field->type ?? '', 'text'); ?>>Text</option>
+                            <option value="textarea" <?php selected($edit_field->type ?? '', 'textarea'); ?>>Textarea</option>
+                            <option value="email" <?php selected($edit_field->type ?? '', 'email'); ?>>Email</option>
+                            <option value="number" <?php selected($edit_field->type ?? '', 'number'); ?>>Number</option>
+                            <option value="url" <?php selected($edit_field->type ?? '', 'url'); ?>>URL</option>
+                            <option value="select" <?php selected($edit_field->type ?? '', 'select'); ?>>Select</option>
+                            <option value="radio" <?php selected($edit_field->type ?? '', 'radio'); ?>>Radio</option>
+                            <option value="file" <?php selected($edit_field->type ?? '', 'file'); ?>>File</option>
+                            <option value="image" <?php selected($edit_field->type ?? '', 'image'); ?>>Image</option>
                         </select>
                     </td>
                 </tr>
@@ -219,16 +233,46 @@ if ($form_id) {
                 </tr>
 
 
+                <?php if (!empty($edit_field) && in_array($edit_field->type, ['select','radio'])) : ?>
                 <tr>
                     <th>Options (for select)</th>
                     <td>
-                        <textarea name="field_options"
-                                placeholder="Option 1, Option 2"><?php
-                        if (!empty($edit_field->options)) {
-                            echo esc_textarea(implode(', ', json_decode($edit_field->options, true)));
-                        }
+                        <textarea name="field_options"><?php
+                            if (!empty($edit_field->options)) {
+                                echo esc_textarea(
+                                    implode(', ', json_decode($edit_field->options, true))
+                                );
+                            }
                         ?></textarea>
+                    </td>
+                </tr>
+                <?php endif; ?>
 
+                <tr class="pfb-file-only" style="display:none;">
+                    <th>Allowed File Types</th>
+                    <td>
+                        <input type="text"
+                            name="file_types"
+                            value="<?php echo esc_attr($edit_field->file_types ?? ''); ?>"
+                            placeholder="jpg,png,jpeg">
+                    </td>
+                </tr>
+
+                <tr class="pfb-file-only" style="display:none;">
+                    <th>Max File Size (MB)</th>
+                    <td>
+                        <input type="number" step="0.1"
+                            name="max_size"
+                            value="<?php echo esc_attr($edit_field->max_size ?? ''); ?>">
+                    </td>
+                </tr>
+
+                <tr class="pfb-file-only" style="display:none;">
+                    <th>Min File Size (MB)</th>
+                    <td>
+                        <input type="number" step="0.1"
+                            name="min_size"
+                            value="<?php echo esc_attr($edit_field->min_size ?? ''); ?>">
                     </td>
                 </tr>
 
@@ -539,6 +583,49 @@ if ($form_id) {
 </script>
 
 
+<!-- Image File Type & Min or max size -->
+ <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        const typeSelect = document.querySelector('[name="field_type"]');
+        const fileRows = document.querySelectorAll('.pfb-file-only');
+
+        function toggleFileOptions() {
+            const val = typeSelect.value;
+            fileRows.forEach(row => {
+                row.style.display = (val === 'file' || val === 'image')
+                    ? 'table-row'
+                    : 'none';
+            });
+        }
+
+        toggleFileOptions();
+        typeSelect.addEventListener('change', toggleFileOptions);
+
+    });
+</script>
+
+<!-- Image/File extra options auto-show -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const typeSelect = document.getElementById('pfb-field-type');
+
+    function toggleFileOptions() {
+        const isFile = ['file','image'].includes(typeSelect.value);
+
+        document.querySelectorAll('.pfb-file-only').forEach(el => {
+            el.style.display = isFile ? '' : 'none';
+        });
+    }
+
+    if (typeSelect) {
+        toggleFileOptions(); // edit mode load fix
+        typeSelect.addEventListener('change', toggleFileOptions);
+    }
+
+});
+</script>
 
 
 </div>

@@ -115,28 +115,44 @@ function pfb_handle_add_field() {
     }
 
     $field_name = strtolower($field_name_raw);
+    $field_type = sanitize_text_field($_POST['field_type']);
+    $options = null;
+
+    // SELECT / RADIO
+    if (in_array($field_type, ['select','radio'])) {
+        $options = !empty($_POST['field_options'])
+            ? wp_json_encode(array_map('trim', explode(',', $_POST['field_options'])))
+            : null;
+    }
+
 
 
 
     $data = [
         'form_id'    => $form_id,
-        'type'       => sanitize_text_field($_POST['field_type']),
+        'type'       => $field_type,
         'label'      => sanitize_text_field($_POST['field_label']),
-        'name' => $field_name,
-        'options'    => wp_json_encode(
-            array_map('trim', explode(',', $_POST['field_options']))
-        ),
+        'name'       => $field_name,
+        'options'    => in_array($field_type, ['select','radio']) ? $options : null,
         'required'   => $required,
         'rules'      => $rules,
-        'sort_order' => 0
+        'sort_order' => 0,
+
+        // ✅ IMAGE / FILE ONLY
+        'file_types' => in_array($field_type, ['image','file'])
+            ? sanitize_text_field($_POST['file_types'] ?? '')
+            : null,
+
+        'max_size' => in_array($field_type, ['image','file'])
+            ? floatval($_POST['max_size'] ?? 0)
+            : null,
+
+        'min_size' => in_array($field_type, ['image','file'])
+            ? floatval($_POST['min_size'] ?? 0)
+            : null,
     ];
 
 
-    // Select options
-    $options = [];
-    if (!empty($_POST['field_options'])) {
-        $options = array_map('trim', explode(',', $_POST['field_options']));
-    }
 
     if ($field_id) {
         // UPDATE
@@ -217,11 +233,43 @@ function pfb_handle_form_submit() {
 
         // file / imagea
         if (in_array($f->type, ['file','image'])) {
-            if (!empty($f->required) && empty($_FILES[$f->name]['name'])) {
+
+            $file = $_FILES[$f->name] ?? null;
+
+            if (!empty($f->required) && empty($file['name'])) {
                 $errors[$f->name] = $f->label . ' is required';
+                continue;
             }
+
+            if (!empty($file['name'])) {
+
+                $allowed_types = !empty($f->file_types)
+                    ? array_map('trim', explode(',', strtolower($f->file_types)))
+                    : [];
+
+                $max_size = !empty($f->max_size) ? $f->max_size * 1024 * 1024 : 0;
+                $min_size = !empty($f->min_size) ? $f->min_size * 1024 * 1024 : 0;
+
+
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $size = $file['size'];
+
+                if ($allowed_types && !in_array($ext, $allowed_types)) {
+                    $errors[$f->name] = $f->label . ' invalid file type';
+                }
+
+                if ($max_size && $size > $max_size) {
+                    $errors[$f->name] = $f->label . ' exceeds max size';
+                }
+
+                if ($min_size && $size < $min_size) {
+                    $errors[$f->name] = $f->label . ' file too small';
+                }
+            }
+
             continue;
         }
+
 
         if (!isset($_POST[$f->name])) {
             if (!empty($f->required)) {
@@ -264,7 +312,6 @@ function pfb_handle_form_submit() {
 
     /* ========= SAVE META ========= */
     foreach ($fields as $f) {
-
         // FILE / IMAGE
         if (in_array($f->type, ['file','image']) && !empty($_FILES[$f->name]['name'])) {
 
@@ -283,6 +330,7 @@ function pfb_handle_form_submit() {
             }
             continue;
         }
+
 
         // NORMAL FIELD
         if (isset($_POST[$f->name])) {

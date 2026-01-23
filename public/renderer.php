@@ -134,15 +134,45 @@ if (!empty($_GET['pfb_errors'])) {
 
                     case 'image':
                         ?>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            name="<?php echo esc_attr($f->name); ?>"
-                            <?php echo !empty($f->required) ? 'required' : ''; ?>
-                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
-                        >
+                            <div class="pfb-file-wrap">
+                                <?php
+                                    $types = !empty($f->file_types) ? $f->file_types : '';
+                                    $max   = !empty($f->max_size) ? $f->max_size : 0;
+                                    $min   = !empty($f->min_size) ? $f->min_size : 0;
+
+                                    ?>
+
+                                    <input
+                                    type="file"
+                                    accept="image/*"
+                                    name="<?php echo esc_attr($f->name); ?>"
+                                    class="pfb-file-input <?php echo $has_error ? 'pfb-error-input' : ''; ?>"
+                                    data-preview="pfb-preview-<?php echo esc_attr($f->name); ?>"
+                                    data-types="<?php echo esc_attr($types); ?>"
+                                    data-max="<?php echo esc_attr($max); ?>"
+                                    data-min="<?php echo esc_attr($min); ?>"
+                                >
+
+
+                                <div class="pfb-preview" id="pfb-preview-<?php echo esc_attr($f->name); ?>"></div>
+                            </div>
+                            <?php if (in_array($f->type, ['image','file'])): ?>
+                                <?php if (!empty($f->file_types) || !empty($f->max_size)): ?>
+                                    <small class="pfb-file-hint" style="display:block; margin-top:6px; color:#666;">
+                                        <?php if (!empty($f->file_types)): ?>
+                                            Allowed: <?php echo esc_html($f->file_types); ?>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($f->max_size)): ?>
+                                            <?php if (!empty($f->file_types)) echo ' | '; ?>
+                                            Max size: <?php echo esc_html($f->max_size); ?>MB
+                                        <?php endif; ?>
+                                    </small>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         <?php
-                        break;
+                    break;
+
                 }
                 ?>
 
@@ -297,17 +327,17 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 document.addEventListener('input', function (e) {
-    const field = e.target;
 
-    if (
-        field.closest('.pfb-field') &&
-        field.value.trim() !== ''
-    ) {
-        const wrapper = field.closest('.pfb-field');
+    if (e.target.type === 'file') return;
 
-        wrapper.classList.remove('pfb-has-error');
-        field.classList.remove('pfb-error-input');
+    const field = e.target.closest('.pfb-field');
+    if (!field) return;
+
+    if (e.target.value.trim() !== '') {
+        field.classList.remove('pfb-has-error');
+        e.target.classList.remove('pfb-error-input');
     }
+
 });
 
 
@@ -383,6 +413,108 @@ function applyConditions() {
 
 document.addEventListener('DOMContentLoaded', applyConditions);
 document.addEventListener('change', applyConditions);
+
+
+
+document.addEventListener('click', function (e) {
+
+    if (!e.target.classList.contains('pfb-remove-file')) return;
+
+    const wrap = e.target.closest('.pfb-file-wrap');
+
+    // reset file input
+    const input = wrap.querySelector('input[type="file"]');
+    input.value = '';
+
+    // remove preview
+    wrap.querySelector('.pfb-preview').innerHTML = '';
+
+    // FIX — remove error UI
+    const fieldWrapper = wrap.closest('.pfb-field');
+    if (fieldWrapper) {
+        fieldWrapper.classList.remove('pfb-has-error');
+    }
+
+    input.classList.remove('pfb-error-input');
+});
+
+
 </script>
+<script>
+document.addEventListener('change', function (e) {
 
+    if (!e.target.classList.contains('pfb-file-input')) return;
 
+    const input = e.target;
+    const field = input.closest('.pfb-field');
+    const previewBox = document.getElementById(input.dataset.preview);
+
+    // reset UI
+    input.classList.remove('pfb-error-input');
+    field.classList.remove('pfb-has-error');
+    if (previewBox) previewBox.innerHTML = '';
+
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const ext = file.name.split('.').pop().toLowerCase();
+    const sizeMB = file.size / (1024 * 1024);
+
+    const allowed = (input.dataset.types || '')
+        .split(',')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean);
+
+    const maxMB = parseFloat(input.dataset.max || 0);
+    const minMB = parseFloat(input.dataset.min || 0);
+
+    let error = '';
+
+    // invalid extension
+    if (allowed.length && !allowed.includes(ext)) {
+        error = `Invalid file type. Allowed: ${allowed.join(', ')}`;
+    }
+
+    // max size
+    if (!error && maxMB && sizeMB > maxMB) {
+        error = `File size exceeds ${maxMB} MB`;
+    }
+
+    // min size
+    if (!error && minMB && sizeMB < minMB) {
+        error = `File size must be at least ${minMB} MB`;
+    }
+
+    // INVALID → STOP
+    if (error) {
+
+        input.value = '';
+        input.classList.add('pfb-error-input');
+        field.classList.add('pfb-has-error');
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid File',
+            text: error,
+        });
+
+        return;
+    }
+
+    // VALID IMAGE → PREVIEW
+    if (file.type.startsWith('image/') && previewBox) {
+
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            previewBox.innerHTML = `
+                <div class="pfb-image-preview">
+                    <img src="${ev.target.result}" />
+                    <button type="button" class="pfb-remove-file">✕</button>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+
+});
+</script>
