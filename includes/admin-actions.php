@@ -6,6 +6,8 @@ add_action('admin_post_pfb_add_field', 'pfb_handle_add_field');
 add_action('admin_post_pfb_delete_field', 'pfb_handle_delete_field');
 add_action('admin_post_pfb_delete_form', 'pfb_handle_delete_form');
 add_action('admin_post_pfb_export_entries', 'pfb_export_entries_csv');
+add_action('admin_post_pfb_update_entry', 'pfb_handle_update_entry');
+
 
 
 /* =========================
@@ -489,5 +491,110 @@ function pfb_export_entries_csv() {
     }
 
     fclose($output);
+    exit;
+}
+
+
+
+// Update Entry handler 
+function pfb_handle_update_entry() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    check_admin_referer('pfb_update_entry', 'pfb_nonce');
+
+    global $wpdb;
+
+    $entry_id = intval($_POST['entry_id'] ?? 0);
+    if (!$entry_id) wp_die('Invalid entry');
+
+    $fields_table = $wpdb->prefix . 'pfb_fields';
+    $meta_table   = $wpdb->prefix . 'pfb_entry_meta';
+    $entries_table= $wpdb->prefix . 'pfb_entries';
+
+    // Get form_id
+    $form_id = $wpdb->get_var(
+        $wpdb->prepare("SELECT form_id FROM $entries_table WHERE id=%d", $entry_id)
+    );
+
+    if (!$form_id) wp_die('Invalid form');
+
+    // Get fields
+    $fields = $wpdb->get_results(
+        $wpdb->prepare("SELECT * FROM $fields_table WHERE form_id=%d", $form_id)
+    );
+
+    // Get existing meta
+    $old_meta = $wpdb->get_results(
+        $wpdb->prepare("SELECT * FROM $meta_table WHERE entry_id=%d", $entry_id)
+    );
+
+    $old_map = [];
+    foreach ($old_meta as $m) {
+        $old_map[$m->field_name] = $m->field_value;
+    }
+
+    // 1️⃣ Delete old meta
+    $wpdb->delete($meta_table, ['entry_id' => $entry_id]);
+
+    // 2️⃣ Save updated values
+    foreach ($fields as $field) {
+
+        // IMAGE FIELD
+        if ($field->type === 'image') {
+
+            // Delete image
+            if (!empty($_POST['delete_image']) &&
+                in_array($field->name, $_POST['delete_image'])) {
+                continue;
+            }
+
+            // Replace image
+            if (!empty($_FILES[$field->name]['name'])) {
+
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                $upload = wp_handle_upload(
+                    $_FILES[$field->name],
+                    ['test_form' => false]
+                );
+
+                if (!empty($upload['url'])) {
+                    $wpdb->insert($meta_table, [
+                        'entry_id'   => $entry_id,
+                        'field_name' => $field->name,
+                        'field_value'=> esc_url_raw($upload['url'])
+                    ]);
+                }
+
+                continue;
+            }
+
+            // Keep old image
+            if (!empty($old_map[$field->name])) {
+                $wpdb->insert($meta_table, [
+                    'entry_id'   => $entry_id,
+                    'field_name' => $field->name,
+                    'field_value'=> $old_map[$field->name]
+                ]);
+            }
+
+            continue;
+        }
+
+        // NORMAL FIELD
+        if (isset($_POST['fields'][$field->name])) {
+            $wpdb->insert($meta_table, [
+                'entry_id'   => $entry_id,
+                'field_name' => $field->name,
+                'field_value'=> sanitize_text_field($_POST['fields'][$field->name])
+            ]);
+        }
+    }
+
+    wp_redirect(
+        admin_url('admin.php?page=pfb-entry-edit&entry_id=' . $entry_id . '&updated=1')
+    );
     exit;
 }

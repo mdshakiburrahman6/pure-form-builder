@@ -81,6 +81,12 @@ if ($form_id) {
                             ); ?>">
                                 View
                             </a>
+                            |
+                            <a href="<?php echo admin_url(
+                                'admin.php?page=pfb-entry-edit&entry_id=' . $entry->id
+                            ); ?>">
+                                Edit
+                            </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

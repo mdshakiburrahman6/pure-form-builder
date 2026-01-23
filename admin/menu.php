@@ -46,7 +46,7 @@ function pfb_register_admin_menu() {
         'pfb_render_entries'
     );
 
-      //SINGLE ENTRY VIEW (HIDDEN PAGE)
+    //SINGLE ENTRY VIEW (HIDDEN PAGE)
     add_submenu_page(
         null, // important (hidden)
         'View Entry',
@@ -55,7 +55,23 @@ function pfb_register_admin_menu() {
         'pfb-entry-view',
         'pfb_render_entry_view'
     );
+
+    // hidden edit page (no sidebar menu)
+    add_submenu_page(
+        null,
+        'Edit Entry',
+        'Edit Entry',
+        'manage_options',
+        'pfb-entry-edit',
+        function () {
+            require PFB_PATH . 'admin/entry-edit.php';
+        }
+    );
+    
 }
+
+
+
 
 /* CALLBACKS */
 
@@ -70,6 +86,7 @@ function pfb_form_builder_page() {
 function pfb_render_entries() {
     include PFB_PATH . 'admin/entries.php';
 }
+
 
 
 function pfb_render_entry_view() {
