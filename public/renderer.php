@@ -18,6 +18,21 @@ $fields = $wpdb->get_results(
 );
 ?>
 
+<!-- Form Sumbit Message -->
+<?php if (isset($_GET['pfb_error'])): ?>
+    <div class="pfb-message pfb-error">
+        <?php echo esc_html(str_replace('|', '<br>', $_GET['pfb_error'])); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['pfb_success'])): ?>
+    <div class="pfb-message pfb-success">
+        Form submitted successfully!
+    </div>
+<?php endif; ?>
+
+
+
 <form class="pfb-form"
       method="post"
       action="<?php echo esc_url(admin_url('admin-post.php')); ?>"

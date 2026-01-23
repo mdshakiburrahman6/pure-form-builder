@@ -66,3 +66,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
 });
+
+
+
+ 
+/**
+ * 
+ * Auto Remove Form Submit Success Message
+ * 
+ */
+setTimeout(() => {
+    const msg = document.querySelector('.pfb-success');
+    if (msg) msg.remove();
+}, 4000); // 4 seconds

@@ -236,7 +236,11 @@ function pfb_handle_form_submit() {
     }
 
     if ($errors) {
-        wp_die(implode('<br>', $errors));
+        $error_string = urlencode(implode(' | ', $errors));
+        wp_redirect(
+            add_query_arg('pfb_error', $error_string, wp_get_referer())
+        );
+        exit;
     }
 
     /* ========= CREATE ENTRY ========= */
@@ -285,7 +289,7 @@ function pfb_handle_form_submit() {
         }
     }
 
-    wp_redirect(add_query_arg('submitted', '1', wp_get_referer()));
+    wp_redirect(add_query_arg('pfb_success', '1', wp_get_referer()));
     exit;
 }
 

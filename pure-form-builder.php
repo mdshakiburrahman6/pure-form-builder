@@ -21,11 +21,17 @@ register_activation_hook(__FILE__, 'pfb_activate');
 
 
 add_action('wp_enqueue_scripts', function () {
+    wp_enqueue_style(
+        'pfb-frontend',
+        plugins_url('assets/css/frontend.css', __FILE__)
+    );
+
     wp_enqueue_script(
         'pfb-public',
-        PFB_URL . 'assets/public.js',
+        PFB_URL . 'assets/js/public.js',
         [],
         '1.0',
         true
     );
 });
+

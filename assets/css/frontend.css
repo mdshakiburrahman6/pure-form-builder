@@ -1,0 +1,42 @@
+.pfb-form {
+    max-width: 600px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    background: #fff;
+}
+
+.pfb-field {
+    margin-bottom: 15px;
+}
+
+.pfb-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.pfb-field input,
+.pfb-field select,
+.pfb-field textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.pfb-error {
+    background: #ffeaea;
+    color: #a00;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-left: 4px solid red;
+}
+
+.pfb-success {
+    background: #e7f7e7;
+    color: #0a7a0a;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-left: 4px solid green;
+}
+
