@@ -235,14 +235,19 @@ function pfb_handle_form_submit() {
         }
     }
 
+    // Error Message
     if ($errors) {
+
         $error_payload = urlencode(wp_json_encode($errors));
 
+        $redirect_url = wp_get_referer() ?: home_url();
+
         wp_redirect(
-            add_query_arg('pfb_errors', $error_payload, wp_get_referer())
+            add_query_arg('pfb_errors', $error_payload, $redirect_url)
         );
         exit;
     }
+
 
 
 
@@ -292,8 +297,13 @@ function pfb_handle_form_submit() {
         }
     }
 
-    wp_redirect(add_query_arg('pfb_success', '1', wp_get_referer()));
+    $redirect_url = remove_query_arg(['pfb_errors'], wp_get_referer());
+
+    wp_redirect(
+        add_query_arg('pfb_success', '1', $redirect_url)
+    );
     exit;
+
 }
 
 

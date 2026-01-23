@@ -180,27 +180,31 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php endif; ?>
 
 <!-- Error Message with sweet alart -->
-<?php if (!empty($_GET['pfb_errors'])) : ?>
+<?php if (!empty($pfb_errors)) : ?>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+
+    const fields = <?php echo wp_json_encode(array_values($pfb_errors)); ?>;
+
+    const message = fields.join(', ');
 
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
         showConfirmButton: false,
         timer: 4000,
-        timerProgressBar: true,
-        iconColor: '#e53935'
+        timerProgressBar: true
     });
 
     Toast.fire({
         icon: 'error',
-        title: 'Please fix the highlighted fields'
+        title: message
     });
 
 });
 </script>
 <?php endif; ?>
+
 
 
 
@@ -248,7 +252,67 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
+// Error class live remove
+document.addEventListener('DOMContentLoaded', function () {
 
+    document.querySelectorAll('.pfb-error-input').forEach(function (input) {
+
+        input.addEventListener('input', function () {
+
+            // remove red input style
+            input.classList.remove('pfb-error-input');
+
+            // remove field wrapper error
+            const field = input.closest('.pfb-field');
+            if (field) {
+                field.classList.remove('pfb-has-error');
+            }
+
+        });
+
+        input.addEventListener('change', function () {
+            input.dispatchEvent(new Event('input'));
+        });
+
+    });
+
+});
+
+// URL clean before user types
+document.addEventListener('DOMContentLoaded', function () {
+
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has('pfb_errors')) {
+
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+            el.addEventListener('input', () => {
+                url.searchParams.delete('pfb_errors');
+                window.history.replaceState({}, document.title, url.pathname);
+            }, { once: true });
+        });
+
+    }
+
+});
+
+document.addEventListener('input', function (e) {
+    const field = e.target;
+
+    if (
+        field.closest('.pfb-field') &&
+        field.value.trim() !== ''
+    ) {
+        const wrapper = field.closest('.pfb-field');
+
+        wrapper.classList.remove('pfb-has-error');
+        field.classList.remove('pfb-error-input');
+    }
+});
+
+
+
+// Form Handlar
 function getFormData(form) {
     const data = {};
     form.querySelectorAll('[name]').forEach(el => {
