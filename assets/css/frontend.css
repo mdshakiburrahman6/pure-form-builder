@@ -40,3 +40,20 @@
     border-left: 4px solid green;
 }
 
+
+.pfb-has-error label {
+    color: #e53935;
+    font-weight: 500;
+}
+
+.pfb-error-input {
+    border: 1.5px solid #e53935 !important;
+    background: #fff6f6;
+}
+
+.pfb-error-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(229,57,53,.15);
+}
+
+

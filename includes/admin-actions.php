@@ -215,33 +215,36 @@ function pfb_handle_form_submit() {
     /* ========= REQUIRED CHECK ========= */
     foreach ($fields as $f) {
 
-        // file / image
+        // file / imagea
         if (in_array($f->type, ['file','image'])) {
             if (!empty($f->required) && empty($_FILES[$f->name]['name'])) {
-                $errors[] = $f->label . ' is required';
+                $errors[$f->name] = $f->label . ' is required';
             }
             continue;
         }
 
         if (!isset($_POST[$f->name])) {
             if (!empty($f->required)) {
-                $errors[] = $f->label . ' is required';
+                $errors[$f->name] = $f->label . ' is required';
             }
             continue;
         }
 
         if (!empty($f->required) && trim($_POST[$f->name]) === '') {
-            $errors[] = $f->label . ' is required';
+            $errors[$f->name] = $f->label . ' is required';
         }
     }
 
     if ($errors) {
-        $error_string = urlencode(implode(' | ', $errors));
+        $error_payload = urlencode(wp_json_encode($errors));
+
         wp_redirect(
-            add_query_arg('pfb_error', $error_string, wp_get_referer())
+            add_query_arg('pfb_errors', $error_payload, wp_get_referer())
         );
         exit;
     }
+
+
 
     /* ========= CREATE ENTRY ========= */
     $wpdb->insert(

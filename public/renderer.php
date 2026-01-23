@@ -18,25 +18,26 @@ $fields = $wpdb->get_results(
 );
 ?>
 
-<!-- Form Sumbit Message -->
-<?php if (isset($_GET['pfb_error'])): ?>
-    <div class="pfb-message pfb-error">
-        <?php echo esc_html(str_replace('|', '<br>', $_GET['pfb_error'])); ?>
-    </div>
-<?php endif; ?>
-
-<?php if (isset($_GET['pfb_success'])): ?>
-    <div class="pfb-message pfb-success">
-        Form submitted successfully!
-    </div>
-<?php endif; ?>
+<?php
 
 
+$pfb_errors = [];
+
+if (!empty($_GET['pfb_errors'])) {
+    $pfb_errors = json_decode(
+        stripslashes(urldecode($_GET['pfb_errors'])),
+        true
+    );
+}
+
+?>
 
 <form class="pfb-form"
-      method="post"
-      action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
-      enctype="multipart/form-data">
+    method="post"
+    action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+    enctype="multipart/form-data"
+    novalidate
+    >
 
 
     <input type="hidden" name="action" value="pfb_submit_form">
@@ -45,14 +46,17 @@ $fields = $wpdb->get_results(
     <?php wp_nonce_field('pfb_frontend_submit', 'pfb_nonce'); ?>
 
 
-    <?php foreach ($fields as $f): ?>
-        <div class="pfb-field"
+    <?php foreach ($fields as $f): 
+        $has_error = isset($pfb_errors[$f->name]);
+    ?>
+        <div class="pfb-field <?php echo $has_error ? 'pfb-has-error' : ''; ?>"
             <?php if (!empty($f->rules)): ?>
-                data-conditions='<?php echo esc_attr($f->rules); ?>'
+                data-conditions="<?php echo esc_attr($f->rules); ?>"
             <?php endif; ?>
         >
 
             <label><?php echo esc_html($f->label); ?></label>
+
 
         <?php
                 switch ($f->type) {
@@ -66,6 +70,7 @@ $fields = $wpdb->get_results(
                             type="<?php echo esc_attr($f->type); ?>"
                             name="<?php echo esc_attr($f->name); ?>"
                             <?php echo !empty($f->required) ? 'required' : ''; ?>
+                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                         >
                         <?php
                         break;
@@ -75,6 +80,7 @@ $fields = $wpdb->get_results(
                         <textarea 
                             name="<?php echo esc_attr($f->name); ?>" 
                             <?php echo !empty($f->required) ? 'required' : ''; ?>
+                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                         ></textarea>
                         <?php
                         break;
@@ -82,7 +88,11 @@ $fields = $wpdb->get_results(
                     case 'select':
                         $options = json_decode($f->options, true) ?: [];
                         ?>
-                        <select name="<?php echo esc_attr($f->name); ?>" <?php echo !empty($f->required) ? 'required' : ''; ?>>
+                        <select name="<?php echo esc_attr($f->name); ?>" 
+                            <?php echo !empty($f->required) ? 'required' : ''; ?> 
+                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
+                            >
+                            
                             <option value="">Select</option>
                             <?php foreach ($options as $opt): ?>
                                 <option value="<?php echo esc_attr($opt); ?>">
@@ -103,6 +113,7 @@ $fields = $wpdb->get_results(
                                     name="<?php echo esc_attr($f->name); ?>"
                                     value="<?php echo esc_attr($opt); ?>"
                                     <?php echo !empty($f->required) ? 'required' : ''; ?>
+                                    class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                                 >
                                 <?php echo esc_html($opt); ?>
                             </label>
@@ -116,6 +127,7 @@ $fields = $wpdb->get_results(
                             type="file"
                             name="<?php echo esc_attr($f->name); ?>"
                             <?php echo !empty($f->required) ? 'required' : ''; ?>
+                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                         >
                         <?php
                         break;
@@ -127,6 +139,7 @@ $fields = $wpdb->get_results(
                             accept="image/*"
                             name="<?php echo esc_attr($f->name); ?>"
                             <?php echo !empty($f->required) ? 'required' : ''; ?>
+                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                         >
                         <?php
                         break;
@@ -140,10 +153,102 @@ $fields = $wpdb->get_results(
     <button type="submit">Submit</button>
 </form>
 
+<!-- Success Message with sweet alart -->
+<?php if (isset($_GET['pfb_success'])) : ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.onmouseenter = Swal.stopTimer;
+            toast.onmouseleave = Swal.resumeTimer;
+        }
+    });
+
+    Toast.fire({
+        icon: 'success',
+        title: 'Form submitted successfully!'
+    });
+
+});
+</script>
+<?php endif; ?>
+
+<!-- Error Message with sweet alart -->
+<?php if (!empty($_GET['pfb_errors'])) : ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        iconColor: '#e53935'
+    });
+
+    Toast.fire({
+        icon: 'error',
+        title: 'Please fix the highlighted fields'
+    });
+
+});
+</script>
+<?php endif; ?>
+
+
 
 
 
 <script>
+/**
+ * 
+ * URL clean after success message
+ * 
+ */
+(function () {
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has('pfb_success')) {
+        url.searchParams.delete('pfb_success');
+        window.history.replaceState({}, document.title, url.pathname);
+    }
+})();
+// URL clean after success message
+
+
+/**
+ * 
+ * URL clean after error message
+ * 
+ */
+(function () {
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.has('pfb_errors')) {
+        url.searchParams.delete('pfb_errors');
+        window.history.replaceState({}, document.title, url.pathname);
+    }
+})();
+
+// URL clean after Error message
+
+
+// Auto Scroll To First Error
+document.addEventListener('DOMContentLoaded', function () {
+    const firstError = document.querySelector('.pfb-has-error');
+    if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+});
+
+
 function getFormData(form) {
     const data = {};
     form.querySelectorAll('[name]').forEach(el => {

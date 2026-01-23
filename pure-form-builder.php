@@ -33,5 +33,12 @@ add_action('wp_enqueue_scripts', function () {
         '1.0',
         true
     );
+    wp_enqueue_script(
+        'sweetalert2',
+        'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+        [],
+        null,
+        true
+    );
 });
 
