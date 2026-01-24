@@ -48,13 +48,14 @@ function pfb_register_admin_menu() {
 
     //SINGLE ENTRY VIEW (HIDDEN PAGE)
     add_submenu_page(
-        null, // important (hidden)
+        null,
         'View Entry',
         'View Entry',
         'manage_options',
         'pfb-entry-view',
-        'pfb_render_entry_view'
+        'pfb_render_entry_view_admin'
     );
+
 
     // hidden edit page (no sidebar menu)
     add_submenu_page(
@@ -69,15 +70,16 @@ function pfb_register_admin_menu() {
     );
 
     // From Setting
+    // VIEW ENTRY (hidden admin page)
     add_submenu_page(
-        null, // hidden page
-        'Form Settings',
-        'Form Settings',
+        null,
+        'View Entry',
+        'View Entry',
         'manage_options',
-        'pfb-form-settings',
-        'pfb_render_form_settings_page'
+        'pfb-entry-view',
+        'pfb_render_entry_view_admin'
     );
-    
+
 }
 
 
@@ -98,24 +100,6 @@ function pfb_render_entries() {
 }
 
 
-
-function pfb_render_entry_view() {
-
-    if (!current_user_can('manage_options')) {
-        wp_die('You are not allowed to access this page.');
-    }
-
-    if (empty($_GET['entry_id'])) {
-        wp_die('Invalid entry ID.');
-    }
-
-    $entry_id = intval($_GET['entry_id']);
-
-    include PFB_PATH . 'admin/entry-view.php';
-}
-
-// From Setting
-
 function pfb_render_form_settings_page() {
     if (!current_user_can('manage_options')) {
         wp_die('Unauthorized');
@@ -123,3 +107,7 @@ function pfb_render_form_settings_page() {
 
     require PFB_PATH . 'admin/form-settings.php';
 }
+
+function pfb_render_entry_view_admin() {
+        require_once PFB_PATH . 'admin/entry-view.php';
+    }

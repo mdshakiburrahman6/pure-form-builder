@@ -3,125 +3,79 @@ if (!defined('ABSPATH')) exit;
 
 global $wpdb;
 
-$entry_id = intval($_GET['entry_id']);
+$entry_id = intval($_GET['entry_id'] ?? 0);
+if (!$entry_id) {
+    echo '<div class="notice notice-error"><p>Invalid entry ID</p></div>';
+    return;
+}
 
-/* =========================
-   ENTRY INFO
-========================= */
 $entry = $wpdb->get_row(
     $wpdb->prepare(
-        "SELECT e.*, f.name AS form_name
-         FROM {$wpdb->prefix}pfb_entries e
-         LEFT JOIN {$wpdb->prefix}pfb_forms f ON e.form_id = f.id
-         WHERE e.id = %d",
+        "SELECT * FROM {$wpdb->prefix}pfb_entries WHERE id=%d",
         $entry_id
     )
 );
 
 if (!$entry) {
-    wp_die('Entry not found.');
+    echo '<div class="notice notice-error"><p>Entry not found</p></div>';
+    return;
 }
 
-/* =========================
-   ENTRY META
-========================= */
 $meta = $wpdb->get_results(
     $wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}pfb_entry_meta
-         WHERE entry_id = %d",
+        "SELECT m.field_value, f.label, f.type
+         FROM {$wpdb->prefix}pfb_entry_meta m
+         JOIN {$wpdb->prefix}pfb_fields f ON f.name = m.field_name
+         WHERE m.entry_id = %d",
         $entry_id
     )
 );
-
-/* =========================
-   FIELD LABEL MAP
-========================= */
-$fields = $wpdb->get_results(
-    $wpdb->prepare(
-        "SELECT name, label, type
-         FROM {$wpdb->prefix}pfb_fields
-         WHERE form_id = %d",
-        $entry->form_id
-    )
-);
-
-$field_map = [];
-foreach ($fields as $f) {
-    $field_map[$f->name] = $f;
-}
 ?>
 
 <div class="wrap">
-    <h1>Entry Details</h1>
+    <h1 style="margin-bottom:20px">
+        Entry Details
+    </h1>
 
-    <p><strong>Form:</strong> <?php echo esc_html($entry->form_name); ?></p>
-    <p><strong>Entry ID:</strong> <?php echo esc_html($entry->id); ?></p>
-    <p><strong>User:</strong>
-        <?php
-        if ($entry->user_id) {
-            $user = get_userdata($entry->user_id);
-            echo esc_html($user ? $user->user_login : 'Deleted User');
-        } else {
-            echo 'Guest';
-        }
-        ?>
-    </p>
-    <p><strong>Date:</strong> <?php echo esc_html($entry->created_at); ?></p>
-
-    <hr>
-
-    <table class="widefat striped">
-        <thead>
-            <tr>
-                <th width="30%">Field</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-
+    <div class="pfb-admin-entry">
         <?php foreach ($meta as $m): 
-            $label = $field_map[$m->field_name]->label ?? $m->field_name;
-            $type  = $field_map[$m->field_name]->type ?? '';
+            if (empty($m->field_value)) continue;
         ?>
-            <tr>
-                <td><strong><?php echo esc_html($label); ?></strong></td>
-                <td>
-                    <?php
-                    // IMAGE PREVIEW + DOWNLOAD
-                    if ($type === 'image' && filter_var($m->field_value, FILTER_VALIDATE_URL)) {
 
-                        $img_url = esc_url($m->field_value);
+            <div class="pfb-field-card">
 
-                        echo '<div style="display:flex; flex-direction:column; gap:8px;">';
+            <div class="pfb-field-label">
+                <?php echo esc_html($m->label); ?>
+            </div>
 
-                        echo '<img src="' . $img_url . '" style="max-width:200px; border:1px solid #ccc; padding:4px;">';
+            <div class="pfb-field-value">
+                <?php if ($m->type === 'image' || $m->type === 'file'): ?>
 
-                        echo '<a href="' . $img_url . '" download class="button button-small" style="text-align:center; width:150px">
-                                ⬇ Download Image
-                            </a>';
+                <div class="pfb-image-box">
+                    <img src="<?php echo esc_url($m->field_value); ?>">
+                    <a class="button button-primary"
+                    href="<?php echo esc_url($m->field_value); ?>"
+                    download>
+                    ⬇ Download
+                    </a>
+                </div>
 
-                        echo '</div>';
+                <?php else: ?>
+                <?php echo esc_html($m->field_value); ?>
+                <?php endif; ?>
+            </div>
 
+        </div>
 
-                    // FILE DOWNLOAD
-                    } elseif ($type === 'file' && filter_var($m->field_value, FILTER_VALIDATE_URL)) {
-                        echo '<a href="' . esc_url($m->field_value) . '" target="_blank">Download file</a>';
-
-                    // NORMAL TEXT
-                    } else {
-                        echo nl2br(esc_html($m->field_value));
-                    }
-                    ?>
-                </td>
-            </tr>
         <?php endforeach; ?>
 
-        </tbody>
-    </table>
+    </div>
+
 
     <p style="margin-top:20px;">
-        <a href="<?php echo esc_url(admin_url('admin.php?page=pfb-entries&form_id=' . $entry->form_id)); ?>" class="button">
-            ← Back to Entries
+        <a class="button button-primary"
+           href="<?php echo admin_url('admin.php?page=pfb-entry-edit&entry_id=' . $entry_id); ?>">
+           Edit Entry
         </a>
     </p>
 </div>

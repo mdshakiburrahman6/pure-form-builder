@@ -45,3 +45,19 @@ add_action('wp_enqueue_scripts', function () {
     );
 });
 
+add_action('admin_enqueue_scripts', function ($hook) {
+
+    if (
+        isset($_GET['page']) &&
+        in_array($_GET['page'], ['pfb-entry-view', 'pfb-entry-edit'])
+    ) {
+        wp_enqueue_style(
+            'pfb-admin-css',
+            PFB_URL . 'assets/css/admin-entry.css',
+            [],
+            '1.0'
+        );
+    }
+
+});
+

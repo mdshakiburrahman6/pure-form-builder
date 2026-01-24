@@ -69,3 +69,70 @@
     border: 1px solid #ddd;
     object-fit: cover;
 }
+
+
+
+/* User View Entry */
+
+.pfb-profile-card{
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 30px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+
+.pfb-profile-image {
+    display: flex;
+    text-align: center;
+    margin-bottom: 30px;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pfb-profile-image img{
+  max-width: 220px;
+  border-radius: 12px;
+}
+
+.pfb-download-btn{
+  display: inline-block;
+  margin-top: 10px;
+  background: #0073aa;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.pfb-info-card{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #f7fafc;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.pfb-label{ 
+  font-weight: 600;
+  color: #333;
+}
+
+.pfb-value{
+  color: #555;
+}
+
+.pfb-edit-btn{
+  display: block;
+  text-align: center;
+  margin-top: 30px;
+  background: #111827;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+

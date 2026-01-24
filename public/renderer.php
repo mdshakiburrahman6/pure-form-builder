@@ -123,6 +123,10 @@ if (!empty($_GET['pfb_errors'])) {
     novalidate
     >
 
+    <?php if (!empty($entry_id)): ?>
+        <input type="hidden" name="entry_id" value="<?php echo esc_attr($entry_id); ?>">
+    <?php endif; ?>
+
 
     <input type="hidden" name="action" value="pfb_submit_form">
     <input type="hidden" name="pfb_form_id" value="<?php echo esc_attr($id); ?>">
@@ -266,6 +270,50 @@ if (!empty($_GET['pfb_errors'])) {
 
     <button type="submit">Submit</button>
 </form>
+
+
+<!-- User Entries View-->
+ <?php 
+    $is_view = isset($_GET['pfb_view'], $_GET['entry_id']);
+    $entry_id = $is_view ? intval($_GET['entry_id']) : 0;
+
+    if ($is_view) {
+
+        if (!pfb_user_can_edit_entry($entry_id, $id)) {
+            echo '<div class="pfb-access-denied">You cannot view this entry.</div>';
+            return;
+        }
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT field_name, field_value
+                FROM {$wpdb->prefix}pfb_entry_meta
+                WHERE entry_id = %d",
+                $entry_id
+            )
+        );
+
+        echo '<div class="pfb-entry-view">';
+        echo '<h3>Your Submission</h3>';
+
+        foreach ($rows as $row) {
+            echo '<p><strong>' . esc_html($row->field_name) . '</strong>: ';
+            echo esc_html($row->field_value) . '</p>';
+        }
+
+        // EDIT BUTTON
+        echo '<a class="pfb-edit-btn" href="' . esc_url(
+            add_query_arg(
+                ['pfb_edit' => 1, 'entry_id' => $entry_id],
+                get_permalink()
+            )
+        ) . '">Edit Entry</a>';
+
+        echo '</div>';
+        return;
+    }
+ ?>
+
 
 <!-- Success Message with sweet alart -->
 <?php if (isset($_GET['pfb_success'])) : ?>

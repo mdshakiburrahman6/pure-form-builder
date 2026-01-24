@@ -1,0 +1,41 @@
+.pfb-admin-entry {
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    /* max-width: 1100px; */
+}
+
+.pfb-field-card {
+    display: flex;
+    /* flex-direction: column; */
+    gap: 24px;
+    padding: 18px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.pfb-field-label {
+    width: 260px;
+    font-weight: 600;
+    color: #333;
+}
+
+.pfb-field-value {
+    flex: 1;
+    color: #222;
+}
+
+.pfb-image-box {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pfb-image-box img {
+    max-width: 180px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+.pfb-image-box .button {
+    width: fit-content;
+}

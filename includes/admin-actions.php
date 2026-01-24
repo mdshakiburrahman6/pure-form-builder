@@ -61,9 +61,6 @@ function pfb_handle_add_field() {
 
 
 
-    // Conditional rules
-    $rules = null;
-
     // =========================
     // RULE BUILDER SAVE
     // =========================
@@ -302,15 +299,66 @@ function pfb_handle_form_submit() {
 
 
     /* ========= CREATE ENTRY ========= */
-    $wpdb->insert(
-        $wpdb->prefix . 'pfb_entries',
-        [
-            'form_id' => $form_id,
-            'user_id' => $user_id
-        ]
+    $entry_id = null;
+
+    // if logged-in user -> checked has entry
+    if ($user_id) {
+        $entry_id = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}pfb_entries 
+                WHERE form_id = %d AND user_id = %d",
+                $form_id,
+                $user_id
+            )
+        );
+    }
+
+    // if no entry  → INSERT
+    if (!$entry_id) {
+
+        $wpdb->insert(
+            "{$wpdb->prefix}pfb_entries",
+            [
+                'form_id' => $form_id,
+                'user_id' => $user_id
+            ]
+        );
+
+        $entry_id = $wpdb->insert_id;
+
+    } else {
+
+        // UPDATE MODE 
+        $wpdb->delete(
+            "{$wpdb->prefix}pfb_entry_meta",
+            ['entry_id' => $entry_id]
+        );
+    }
+
+    // get form settings
+    $form = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT allow_user_edit FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
+            $form_id
+        )
     );
 
-    $entry_id = $wpdb->insert_id;
+    // if entry exists & editing not allowed
+    if ($entry_id && empty($form->allow_user_edit)) {
+
+        $redirect_url = wp_get_referer() ?: home_url();
+
+        wp_redirect(
+            add_query_arg(
+                'pfb_errors',
+                urlencode(wp_json_encode(['form' => 'You have already submitted this form.'])),
+                $redirect_url
+            )
+        );
+        exit;
+    }
+
+    
 
     /* ========= SAVE META ========= */
     foreach ($fields as $f) {
@@ -600,40 +648,40 @@ function pfb_handle_update_entry() {
 }
 
 
-add_action('admin_post_pfb_save_form_settings', function () {
+// add_action('admin_post_pfb_save_form_settings', function () {
 
-    if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized');
-    }
+//     if (!current_user_can('manage_options')) {
+//         wp_die('Unauthorized');
+//     }
 
-    check_admin_referer('pfb_save_form_settings', 'pfb_settings_nonce');
+//     check_admin_referer('pfb_save_form_settings', 'pfb_settings_nonce');
 
-    global $wpdb;
+//     global $wpdb;
 
-    $form_id = intval($_POST['form_id']);
+//     $form_id = intval($_POST['form_id']);
 
-    $allowed_roles = !empty($_POST['allowed_roles'])
-        ? implode(',', array_map('sanitize_key', $_POST['allowed_roles']))
-        : '';
+//     $allowed_roles = !empty($_POST['allowed_roles'])
+//         ? implode(',', array_map('sanitize_key', $_POST['allowed_roles']))
+//         : '';
 
 
-    $wpdb->update(
-        $wpdb->prefix . 'pfb_forms',
-        [
-            'access_type'     => sanitize_text_field($_POST['access_type']),
-            'allowed_roles'   => $allowed_roles,
-            'redirect_type'   => sanitize_text_field($_POST['redirect_type']),
-            'redirect_page'   => intval($_POST['redirect_page']),
-            'allow_user_edit' => isset($_POST['allow_user_edit']) ? 1 : 0,
-        ],
-        ['id' => $form_id]
-    );
+//     $wpdb->update(
+//         $wpdb->prefix . 'pfb_forms',
+//         [
+//             'access_type'     => sanitize_text_field($_POST['access_type']),
+//             'allowed_roles'   => $allowed_roles,
+//             'redirect_type'   => sanitize_text_field($_POST['redirect_type']),
+//             'redirect_page'   => intval($_POST['redirect_page']),
+//             'allow_user_edit' => isset($_POST['allow_user_edit']) ? 1 : 0,
+//         ],
+//         ['id' => $form_id]
+//     );
 
-    wp_redirect(
-        admin_url('admin.php?page=pfb-form-settings&form_id=' . $form_id . '&saved=1')
-    );
-    exit;
-});
+//     wp_redirect(
+//         admin_url('admin.php?page=pfb-form-settings&form_id=' . $form_id . '&saved=1')
+//     );
+//     exit;
+// });
 
 
 add_action('admin_post_pfb_save_form_settings', 'pfb_save_form_settings');
@@ -684,7 +732,3 @@ function pfb_save_form_settings() {
     exit;
 }
 
-
-if ($wpdb->last_error) {
-    wp_die($wpdb->last_error);
-}
