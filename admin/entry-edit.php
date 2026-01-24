@@ -3,6 +3,12 @@ if (!defined('ABSPATH')) exit;
 
 global $wpdb;
 
+// Security check 
+if (!current_user_can('manage_options')) {
+    wp_die('You do not have permission to edit this entry.');
+}
+
+
 /* =========================
    GET ENTRY ID
 ========================= */
@@ -27,6 +33,17 @@ if (!$entry) {
 }
 
 $form_id = $entry->form_id;
+$form = $wpdb->get_row(
+    $wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
+        $form_id
+    )
+);
+
+if (!$form) {
+    wp_die('Invalid form');
+}
+
 
 /* =========================
    GET FORM FIELDS
@@ -127,6 +144,20 @@ foreach ($meta_rows as $m) {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                    <?php break; ?>
+
+                    <?php case 'radio':
+                        $options = json_decode($field->options, true) ?: [];
+                    ?>
+                        <?php foreach ($options as $opt): ?>
+                            <label style="display:block;margin-bottom:4px;">
+                                <input type="radio"
+                                    name="fields[<?php echo esc_attr($field->name); ?>]"
+                                    value="<?php echo esc_attr($opt); ?>"
+                                    <?php checked($value, $opt); ?>>
+                                <?php echo esc_html($opt); ?>
+                            </label>
+                        <?php endforeach; ?>
                     <?php break; ?>
 
                     <?php case 'image': ?>

@@ -49,6 +49,12 @@ $forms = $wpdb->get_results("SELECT * FROM $table ORDER BY id DESC");
                             style="color:red;">
                                 Delete
                             </a>
+                            |
+                            <a href="<?php echo admin_url(
+                                'admin.php?page=pfb-form-settings&form_id=' . $form->id
+                            ); ?>">
+                                Settings
+                            </a>
                         </td>
 
                     </tr>

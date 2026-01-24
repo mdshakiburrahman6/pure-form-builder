@@ -15,6 +15,8 @@ require_once PFB_PATH . 'admin/menu.php';
 require_once PFB_PATH . 'public/shortcode.php';
 require_once PFB_PATH . 'includes/ajax-save.php';
 require_once PFB_PATH . 'includes/admin-actions.php';
+require_once PFB_PATH . 'includes/helpers.php';
+
 
 
 

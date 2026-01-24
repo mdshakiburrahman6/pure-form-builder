@@ -3,6 +3,90 @@ if (!defined('ABSPATH')) exit;
 
 global $wpdb;
 
+
+$form = $wpdb->get_row(
+    $wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
+        $id
+    )
+);
+
+if (!$form) {
+    echo '<p>Invalid form.</p>';
+    return;
+}
+
+
+$access_type   = $form->access_type ?? 'all';
+$allowed_roles = !empty($form->allowed_roles)
+    ? array_map('trim', explode(',', $form->allowed_roles))
+    : [];
+
+$redirect_type = $form->redirect_type ?? 'message';
+$redirect_page = intval($form->redirect_page ?? 0);
+
+
+$is_logged_in = is_user_logged_in();
+$current_user = wp_get_current_user();
+
+// ACCESS TYPE CHECK
+$access_error = null;
+
+if ($access_type === 'logged_in' && !is_user_logged_in()) {
+    $access_error = pfb_handle_access_denied($redirect_type, $redirect_page);
+}
+
+if ($access_type === 'guest' && is_user_logged_in()) {
+    $access_error = pfb_handle_access_denied($redirect_type, $redirect_page);
+}
+
+// ROLE CHECK — independent of access_type
+if (!$access_error && !empty($allowed_roles)) {
+
+    if (!is_user_logged_in()) {
+        // roles set but user not logged in
+        $access_error = pfb_handle_access_denied($redirect_type, $redirect_page);
+
+    } elseif (empty(array_intersect($allowed_roles, (array) $current_user->roles))) {
+        // logged in but wrong role
+        $access_error = pfb_handle_access_denied($redirect_type, $redirect_page);
+    }
+}
+
+// MESSAGE
+if ($access_error === 'message') {
+    echo '<div class="pfb-access-denied">
+        <strong>Access Denied</strong><br>
+        You do not have permission to view this form.
+    </div>';
+    return;
+}
+
+// REDIRECT (login / page)
+if (is_array($access_error)) {
+
+    add_action('template_redirect', function () use ($access_error) {
+
+        if ($access_error['type'] === 'login') {
+            wp_safe_redirect(wp_login_url(get_permalink()));
+            exit;
+        }
+
+        if ($access_error['type'] === 'page' && !empty($access_error['page'])) {
+            wp_safe_redirect(get_permalink($access_error['page']));
+            exit;
+        }
+
+    });
+
+    return;
+}
+
+
+
+
+
+
 /**
  * $id shortcode 
  * [pfb_form id="2"]

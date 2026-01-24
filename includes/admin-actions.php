@@ -598,3 +598,93 @@ function pfb_handle_update_entry() {
     );
     exit;
 }
+
+
+add_action('admin_post_pfb_save_form_settings', function () {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('Unauthorized');
+    }
+
+    check_admin_referer('pfb_save_form_settings', 'pfb_settings_nonce');
+
+    global $wpdb;
+
+    $form_id = intval($_POST['form_id']);
+
+    $allowed_roles = !empty($_POST['allowed_roles'])
+        ? implode(',', array_map('sanitize_key', $_POST['allowed_roles']))
+        : '';
+
+
+    $wpdb->update(
+        $wpdb->prefix . 'pfb_forms',
+        [
+            'access_type'     => sanitize_text_field($_POST['access_type']),
+            'allowed_roles'   => $allowed_roles,
+            'redirect_type'   => sanitize_text_field($_POST['redirect_type']),
+            'redirect_page'   => intval($_POST['redirect_page']),
+            'allow_user_edit' => isset($_POST['allow_user_edit']) ? 1 : 0,
+        ],
+        ['id' => $form_id]
+    );
+
+    wp_redirect(
+        admin_url('admin.php?page=pfb-form-settings&form_id=' . $form_id . '&saved=1')
+    );
+    exit;
+});
+
+
+add_action('admin_post_pfb_save_form_settings', 'pfb_save_form_settings');
+
+function pfb_save_form_settings() {
+
+    if (!current_user_can('manage_options')) {
+        wp_die('Permission denied');
+    }
+
+    if (
+        !isset($_POST['pfb_settings_nonce']) ||
+        !wp_verify_nonce($_POST['pfb_settings_nonce'], 'pfb_save_form_settings')
+    ) {
+        wp_die('Invalid nonce');
+    }
+
+    global $wpdb;
+
+    $form_id = intval($_POST['form_id']);
+
+    $access_type     = sanitize_text_field($_POST['access_type'] ?? 'all');
+    $redirect_type   = sanitize_text_field($_POST['redirect_type'] ?? 'message');
+    $redirect_page   = intval($_POST['redirect_page'] ?? 0);
+    $allow_user_edit = isset($_POST['allow_user_edit']) ? 1 : 0;
+
+    $allowed_roles = isset($_POST['allowed_roles'])
+        ? implode(',', array_map('sanitize_text_field', $_POST['allowed_roles']))
+        : null;
+
+    $wpdb->update(
+        "{$wpdb->prefix}pfb_forms",
+        [
+            'access_type'     => $access_type,
+            'allowed_roles'   => $allowed_roles,
+            'redirect_type'   => $redirect_type,
+            'redirect_page'   => $redirect_page,
+            'allow_user_edit' => $allow_user_edit,
+        ],
+        ['id' => $form_id],
+        ['%s','%s','%s','%d','%d'],
+        ['%d']
+    );
+
+    wp_redirect(
+        admin_url("admin.php?page=pfb-form-settings&form_id={$form_id}&updated=1")
+    );
+    exit;
+}
+
+
+if ($wpdb->last_error) {
+    wp_die($wpdb->last_error);
+}
