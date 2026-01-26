@@ -383,16 +383,39 @@ function pfb_handle_form_submit() {
 
 
         // NORMAL FIELD
-        if (isset($_POST[$f->name])) {
+        // if (isset($_POST[$f->name])) {
+        //     $wpdb->insert(
+        //         $wpdb->prefix . 'pfb_entry_meta',
+        //         [
+        //             'entry_id'   => $entry_id,
+        //             'field_name' => $f->name,
+        //             'field_value'=> sanitize_text_field($_POST[$f->name])
+        //         ]
+        //     );
+        // }
+        $value = null;
+
+        // Admin edit (fields[name])
+        if (isset($_POST['fields'][$f->name])) {
+            $value = $_POST['fields'][$f->name];
+        }
+        // Frontend submit (legacy)
+        elseif (isset($_POST[$f->name])) {
+            $value = $_POST[$f->name];
+        }
+
+        if ($value !== null) {
             $wpdb->insert(
                 $wpdb->prefix . 'pfb_entry_meta',
                 [
                     'entry_id'   => $entry_id,
                     'field_name' => $f->name,
-                    'field_value'=> sanitize_text_field($_POST[$f->name])
+                    'field_value'=> sanitize_text_field($value)
                 ]
             );
         }
+
+
     }
 
     $redirect_url = remove_query_arg(['pfb_errors'], wp_get_referer());

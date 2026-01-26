@@ -70,9 +70,28 @@ $meta_rows = $wpdb->get_results(
 
 // Meta map for easy access
 $meta = [];
+
+// First: entry_meta table
 foreach ($meta_rows as $m) {
     $meta[$m->field_name] = $m->field_value;
 }
+
+// Fallback: entry->data (legacy / old entries)
+if (!empty($entry->data)) {
+
+    $entry_data = maybe_unserialize($entry->data);
+
+    if (is_array($entry_data)) {
+        foreach ($entry_data as $key => $val) {
+
+            // Do not overwrite meta table values
+            if (!isset($meta[$key])) {
+                $meta[$key] = $val;
+            }
+        }
+    }
+}
+
 
 ?>
 
@@ -105,7 +124,36 @@ foreach ($meta_rows as $m) {
 
         <table class="form-table">
             <?php foreach ($fields as $field): 
-                $value = $meta[$field->name] ?? '';
+               $value = '';
+
+                $field_key = $field->name;
+                $prefixed_key = 'qr_' . $field->name;
+
+                // 1️⃣ Exact match
+                if (isset($meta[$field_key])) {
+                    $value = $meta[$field_key];
+                }
+                // 2️⃣ qr_ prefixed match (🔥 MAIN FIX)
+                elseif (isset($meta[$prefixed_key])) {
+                    $value = $meta[$prefixed_key];
+                }
+                // 3️⃣ Fallback: loose match (safety for old data)
+                else {
+                    foreach ($meta as $k => $v) {
+                        $normalized_k = strtolower(str_replace(['-', '_'], '', $k));
+                        $normalized_f = strtolower(str_replace(['-', '_'], '', $field_key));
+
+                        if ($normalized_k === $normalized_f ||
+                            $normalized_k === 'qr' . $normalized_f) {
+                            $value = $v;
+                            break;
+                        }
+                    }
+                }
+
+                $value = is_string($value) ? trim($value) : $value;
+
+
             ?>
 
             <tr class="pfb-field"
@@ -140,30 +188,42 @@ foreach ($meta_rows as $m) {
                     <?php case 'select':
                         $options = json_decode($field->options, true) ?: [];
                     ?>
-                        <select name="fields[<?php echo esc_attr($field->name); ?>]">
-                            <option value="">Select</option>
-                            <?php foreach ($options as $opt): ?>
-                                <option value="<?php echo esc_attr($opt); ?>"
-                                    <?php selected($value, $opt); ?>>
-                                    <?php echo esc_html($opt); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    <?php break; ?>
+                    <select name="fields[<?php echo esc_attr($field->name); ?>]">
+                        <?php $value = strtolower(trim((string) $value)); ?>
+                        <option value="">Select</option>
+
+                        <?php foreach ($options as $opt): 
+                            $opt_value = strtolower(trim($opt));
+                        ?>
+                        <option value="<?php echo esc_attr($opt_value); ?>"
+                            <?php selected($value, $opt_value); ?>>
+                            <?php echo esc_html($opt); ?>
+                        </option>
+                        <?php endforeach; ?>
+
+                    </select>
+                    <?php
+                    break;
+                    ?>
 
                     <?php case 'radio':
                         $options = json_decode($field->options, true) ?: [];
+                        foreach ($options as $key => $label):
+
+                            $opt_value = is_int($key) ? $label : $key;
+                            $opt_label = is_int($key) ? $label : $label;
                     ?>
-                        <?php foreach ($options as $opt): ?>
-                            <label style="display:block;margin-bottom:4px;">
-                                <input type="radio"
-                                    name="fields[<?php echo esc_attr($field->name); ?>]"
-                                    value="<?php echo esc_attr($opt); ?>"
-                                    <?php checked($value, $opt); ?>>
-                                <?php echo esc_html($opt); ?>
-                            </label>
-                        <?php endforeach; ?>
-                    <?php break; ?>
+                        <label>
+                            <input type="radio"
+                                name="fields[<?php echo esc_attr($field->name); ?>]"
+                                value="<?php echo esc_attr($opt_value); ?>"
+                                <?php checked($value, $opt_value); ?>>
+                            <?php echo esc_html($opt_label); ?>
+                        </label><br>
+                    <?php
+                        endforeach;
+                    break;
+                    ?>
 
                     <?php case 'image': ?>
 
@@ -184,6 +244,17 @@ foreach ($meta_rows as $m) {
                             name="<?php echo esc_attr($field->name); ?>">
 
                     <?php break; ?>
+
+                    <?php
+                        default:
+                    ?>
+                        <input type="text"
+                            name="fields[<?php echo esc_attr($field->name); ?>]"
+                            value="<?php echo esc_attr($value); ?>"
+                            class="regular-text">
+                    <?php
+                    break;
+                    ?>
 
                     <?php endswitch; ?>
 
@@ -210,7 +281,7 @@ foreach ($meta_rows as $m) {
 <script>
 function getFormData(form) {
     const data = {};
-    form.querySelectorAll('[name]').forEach(el => {
+    form.querySelectorAll('[name^="fields["]').forEach(el => {
         if (el.type === 'radio') {
             if (el.checked) data[el.name.replace(/^fields\[|\]$/g,'')] = el.value;
         } else {
@@ -220,18 +291,44 @@ function getFormData(form) {
     return data;
 }
 
+// function evaluateRules(ruleGroups, formData) {
+//     return ruleGroups.some(group => {
+//         return group.rules.every(rule => {
+//             const currentValue = formData[rule.field] ?? '';
+//             if (currentValue === '') return false;
+
+//             if (rule.operator === 'is') return currentValue === rule.value;
+//             if (rule.operator === 'is_not') return currentValue !== rule.value;
+//             return false;
+//         });
+//     });
+// }
+
 function evaluateRules(ruleGroups, formData) {
     return ruleGroups.some(group => {
         return group.rules.every(rule => {
-            const currentValue = formData[rule.field] ?? '';
+
+            let currentValue = formData[rule.field] ?? '';
+
+            // normalize both sides
+            currentValue = String(currentValue).toLowerCase().trim();
+            const ruleValue = String(rule.value).toLowerCase().trim();
+
             if (currentValue === '') return false;
 
-            if (rule.operator === 'is') return currentValue === rule.value;
-            if (rule.operator === 'is_not') return currentValue !== rule.value;
+            if (rule.operator === 'is') {
+                return currentValue === ruleValue;
+            }
+
+            if (rule.operator === 'is_not') {
+                return currentValue !== ruleValue;
+            }
+
             return false;
         });
     });
 }
+
 
 function applyAdminConditions() {
     const form = document.querySelector('.pfb-admin-form');
@@ -259,8 +356,12 @@ function applyAdminConditions() {
             }
         });
     });
+    form.dispatchEvent(new Event('change'));
 }
 
-document.addEventListener('DOMContentLoaded', applyAdminConditions);
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(applyAdminConditions, 50);
+});
+
 document.addEventListener('change', applyAdminConditions);
 </script>
