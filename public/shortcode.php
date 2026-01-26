@@ -159,7 +159,7 @@ if (!function_exists('pfb_render_entry_view')) {
                 <?php endforeach; ?>
 
             </div>
-            
+
             <a class="pfb-edit-btn" href="<?php echo esc_url(add_query_arg('edit', 1)); ?>">
                 ✏️ Edit Profile
             </a>
@@ -169,3 +169,12 @@ if (!function_exists('pfb_render_entry_view')) {
     }
 }
 
+
+
+
+// View / Edit mode
+if (isset($_GET['edit']) && $_GET['edit'] == 1) {
+    return do_shortcode(
+        '[pfb_form id="'.$form_id.'" edit="1" entry_id="'.$entry_id.'"]'
+    );
+}

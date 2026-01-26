@@ -233,20 +233,29 @@ if ($form_id) {
                 </tr>
 
 
-                <?php if (!empty($edit_field) && in_array($edit_field->type, ['select','radio'])) : ?>
-                <tr>
-                    <th>Options (for select)</th>
+                
+                <tr class="pfb-field-options-row">
+                    <th>Options</th>
                     <td>
-                        <textarea name="field_options"><?php
+                        <textarea name="field_options"
+                                rows="4"
+                                placeholder="One option per line"><?php
                             if (!empty($edit_field->options)) {
-                                echo esc_textarea(
-                                    implode(', ', json_decode($edit_field->options, true))
-                                );
+                                $opts = json_decode($edit_field->options, true);
+                                if (is_array($opts)) {
+                                    echo esc_textarea(implode("\n", $opts));
+                                }
                             }
                         ?></textarea>
+
+                        <p class="description">
+                            Used for Select, Radio fields
+                        </p>
                     </td>
                 </tr>
-                <?php endif; ?>
+
+
+                 
 
                 <tr class="pfb-file-only" style="display:none;">
                     <th>Allowed File Types</th>
@@ -607,24 +616,45 @@ if ($form_id) {
 
 <!-- Image/File extra options auto-show -->
 <script>
+// document.addEventListener('DOMContentLoaded', function () {
+
+//     const typeSelect = document.getElementById('pfb-field-type');
+
+//     function toggleFileOptions() {
+//         const isFile = ['file','image'].includes(typeSelect.value);
+
+//         document.querySelectorAll('.pfb-file-only').forEach(el => {
+//             el.style.display = isFile ? '' : 'none';
+//         });
+//     }
+
+//     if (typeSelect) {
+//         toggleFileOptions(); // edit mode load fix
+//         typeSelect.addEventListener('change', toggleFileOptions);
+//     }
+
+// });
 document.addEventListener('DOMContentLoaded', function () {
 
     const typeSelect = document.getElementById('pfb-field-type');
+    const optionsRow = document.querySelector('.pfb-field-options-row');
 
-    function toggleFileOptions() {
-        const isFile = ['file','image'].includes(typeSelect.value);
+    function toggleOptions() {
+        if (!optionsRow) return;
 
-        document.querySelectorAll('.pfb-file-only').forEach(el => {
-            el.style.display = isFile ? '' : 'none';
-        });
+        const val = typeSelect.value;
+        optionsRow.style.display =
+            ['select', 'radio'].includes(val)
+                ? 'table-row'
+                : 'none';
     }
 
     if (typeSelect) {
-        toggleFileOptions(); // edit mode load fix
-        typeSelect.addEventListener('change', toggleFileOptions);
+        toggleOptions(); // edit mode fix
+        typeSelect.addEventListener('change', toggleOptions);
     }
-
 });
+
 </script>
 
 
