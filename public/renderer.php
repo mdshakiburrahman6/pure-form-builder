@@ -139,7 +139,7 @@ if (!empty($_GET['pfb_errors'])) {
     ?>
         <div class="pfb-field <?php echo $has_error ? 'pfb-has-error' : ''; ?>"
             <?php if (!empty($f->rules)): ?>
-                data-conditions="<?php echo esc_attr($f->rules); ?>"
+                data-rules="<?php echo esc_attr($f->rules); ?>"
             <?php endif; ?>
         >
 
@@ -471,80 +471,6 @@ document.addEventListener('input', function (e) {
     }
 
 });
-
-
-
-// Form Handlar
-function getFormData(form) {
-    const data = {};
-    form.querySelectorAll('[name]').forEach(el => {
-        if (el.type === 'radio') {
-            if (el.checked) data[el.name] = el.value;
-        } else {
-            data[el.name] = el.value;
-        }
-    });
-    return data;
-}
-
-function evaluateRules(ruleGroups, formData) {
-    return ruleGroups.some(group => {
-        return group.rules.every(rule => {
-            const currentValue = formData[rule.field] ?? '';
-
-            if (currentValue === '') return false;
-
-            if (rule.operator === 'is') {
-                return currentValue === rule.value;
-            }
-
-            if (rule.operator === 'is_not') {
-                return currentValue !== rule.value;
-            }
-
-            return false;
-        });
-    });
-}
-
-function applyConditions() {
-    const form = document.querySelector('.pfb-form');
-    if (!form) return;
-
-    const formData = getFormData(form);
-
-    document.querySelectorAll('.pfb-field').forEach(field => {
-
-        // No conditional logic → always visible
-        if (!field.dataset.conditions) {
-            field.style.display = '';
-            return;
-        }
-
-        const rules = JSON.parse(field.dataset.conditions);
-        const shouldShow = evaluateRules(rules, formData);
-
-        field.style.display = shouldShow ? '' : 'none';
-
-        // prevent hidden required bug
-        field.querySelectorAll('input, select, textarea').forEach(el => {
-            if (!el.dataset.wasRequired) {
-                el.dataset.wasRequired = el.required ? '1' : '0';
-            }
-
-            if (shouldShow) {
-                el.disabled = false;
-                el.required = el.dataset.wasRequired === '1';
-            } else {
-                el.disabled = true;
-                el.required = false;
-            }
-        });
-    });
-}
-
-document.addEventListener('DOMContentLoaded', applyConditions);
-document.addEventListener('change', applyConditions);
 
 
 

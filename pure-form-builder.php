@@ -43,6 +43,13 @@ add_action('wp_enqueue_scripts', function () {
         null,
         true
     );
+    wp_enqueue_script(
+        'pfb-conditional',
+        PFB_URL . 'assets/js/conditional.js',
+        [],
+        '1.0',
+        true
+    );
 });
 
 add_action('admin_enqueue_scripts', function ($hook) {
@@ -58,6 +65,11 @@ add_action('admin_enqueue_scripts', function ($hook) {
             '1.0'
         );
     }
-
+    wp_enqueue_script(
+        'pfb-conditional',
+        PFB_URL . 'assets/js/conditional.js',
+        [],
+        '1.0',
+        true
+    );
 });
-

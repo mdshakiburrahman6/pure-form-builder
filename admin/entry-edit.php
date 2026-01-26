@@ -92,8 +92,9 @@ foreach ($meta_rows as $m) {
     <p><strong>Date:</strong> <?php echo esc_html($entry->created_at); ?></p>
 
     <hr>
+    
 
-    <form method="post"
+    <form method="post" class="pfb-admin-form"
         action="<?php echo admin_url('admin-post.php'); ?>"
         enctype="multipart/form-data">
 
@@ -107,18 +108,22 @@ foreach ($meta_rows as $m) {
                 $value = $meta[$field->name] ?? '';
             ?>
 
-            <tr>
+            <tr class="pfb-field"
+                <?php if (!empty($field->rules)): ?>
+                    data-rules="<?php echo esc_attr($field->rules); ?>"
+                <?php endif; ?>
+            >
+
                 <th>
                     <label><?php echo esc_html($field->label); ?></label>
                 </th>
                 <td>
 
                     <?php switch ($field->type):
-
-                    case 'text':
-                    case 'number':
-                    case 'email':
-                    case 'url':
+                        case 'text':
+                        case 'number':
+                        case 'email':
+                        case 'url':
                     ?>
                         <input type="<?php echo esc_attr($field->type); ?>"
                             name="fields[<?php echo esc_attr($field->name); ?>]"
@@ -197,3 +202,65 @@ foreach ($meta_rows as $m) {
         ← Back to Entries
     </a>
 </div>
+
+
+
+
+<!-- Admin JavaScript -->
+<script>
+function getFormData(form) {
+    const data = {};
+    form.querySelectorAll('[name]').forEach(el => {
+        if (el.type === 'radio') {
+            if (el.checked) data[el.name.replace(/^fields\[|\]$/g,'')] = el.value;
+        } else {
+            data[el.name.replace(/^fields\[|\]$/g,'')] = el.value;
+        }
+    });
+    return data;
+}
+
+function evaluateRules(ruleGroups, formData) {
+    return ruleGroups.some(group => {
+        return group.rules.every(rule => {
+            const currentValue = formData[rule.field] ?? '';
+            if (currentValue === '') return false;
+
+            if (rule.operator === 'is') return currentValue === rule.value;
+            if (rule.operator === 'is_not') return currentValue !== rule.value;
+            return false;
+        });
+    });
+}
+
+function applyAdminConditions() {
+    const form = document.querySelector('.pfb-admin-form');
+    if (!form) return;
+
+    const formData = getFormData(form);
+
+    form.querySelectorAll('.pfb-field').forEach(field => {
+
+        if (!field.dataset.rules) {
+            field.style.display = '';
+            return;
+        }
+
+        const rules = JSON.parse(field.dataset.rules);
+        const shouldShow = evaluateRules(rules, formData);
+
+        field.style.display = shouldShow ? '' : 'none';
+
+        field.querySelectorAll('input, select, textarea').forEach(el => {
+            if (shouldShow) {
+                el.disabled = false;
+            } else {
+                el.disabled = true;
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', applyAdminConditions);
+document.addEventListener('change', applyAdminConditions);
+</script>
