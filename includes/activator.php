@@ -10,17 +10,14 @@ function pfb_activate() {
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_forms (
         id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         name VARCHAR(200),
-
         access_type VARCHAR(50) DEFAULT 'all',
         allowed_roles TEXT NULL,
         redirect_type VARCHAR(50) DEFAULT 'message',
         redirect_page BIGINT(20) DEFAULT 0,
         allow_user_edit TINYINT(1) DEFAULT 0,
-
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY  (id)
     ) $charset;");
-
 
     // Fields table
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_fields (
@@ -39,7 +36,7 @@ function pfb_activate() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) $charset;");
 
-    // Entries
+    // Entries table
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_entries (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         form_id BIGINT,
@@ -48,8 +45,7 @@ function pfb_activate() {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) $charset;");
 
-
-    // Entry meta
+    // Entry meta table
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_entry_meta (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         entry_id BIGINT,

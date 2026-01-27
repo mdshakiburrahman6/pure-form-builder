@@ -26,7 +26,6 @@ require_once PFB_PATH . 'includes/admin-actions.php';
 require_once PFB_PATH . 'includes/helpers.php';
 require_once PFB_PATH . 'includes/submit-handler.php';
 
-
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style(
         'pfb-frontend',
@@ -57,7 +56,6 @@ add_action('wp_enqueue_scripts', function () {
 });
 
 add_action('admin_enqueue_scripts', function ($hook) {
-
     if (
         isset($_GET['page']) &&
         in_array($_GET['page'], ['pfb-entry-view', 'pfb-entry-edit'])
