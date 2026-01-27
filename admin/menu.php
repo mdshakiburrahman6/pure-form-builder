@@ -70,6 +70,16 @@ function pfb_register_admin_menu() {
     );
 
     // From Setting
+       add_submenu_page(
+        'pfb-forms',                
+        'Form Settings',
+        'Settings',
+        'manage_options',
+        'pfb-form-settings',
+        'pfb_render_form_settings'
+    );
+
+
     // VIEW ENTRY (hidden admin page)
     add_submenu_page(
         null,
@@ -100,13 +110,15 @@ function pfb_render_entries() {
 }
 
 
-function pfb_render_form_settings_page() {
+function pfb_render_form_settings() {
+
     if (!current_user_can('manage_options')) {
         wp_die('Unauthorized');
     }
 
-    require PFB_PATH . 'admin/form-settings.php';
+    require_once PFB_PATH . '/admin/form-settings.php';
 }
+
 
 function pfb_render_entry_view_admin() {
         require_once PFB_PATH . 'admin/entry-view.php';
