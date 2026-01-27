@@ -1,9 +1,11 @@
 <?php
+// public/renderer.php
 if (!defined('ABSPATH')) exit;
 
+// Renderer for [pfb_form] shortcode
 global $wpdb;
 
-
+// Renderer for [pfb_form] shortcode
 $form = $wpdb->get_row(
     $wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
@@ -11,12 +13,32 @@ $form = $wpdb->get_row(
     )
 );
 
+// Check if editing an existing entry
+$is_edit = !empty($entry_id);
+$existing_meta = [];
+
+if ($is_edit) {
+    $rows = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT field_name, field_value
+             FROM {$wpdb->prefix}pfb_entry_meta
+             WHERE entry_id = %d",
+            $entry_id
+        )
+    );
+
+    foreach ($rows as $row) {
+        $existing_meta[$row->field_name] = $row->field_value;
+    }
+}
+
+// Form existence check
 if (!$form) {
     echo '<p>Invalid form.</p>';
     return;
 }
 
-
+// ACCESS SETTINGS
 $access_type   = $form->access_type ?? 'all';
 $allowed_roles = !empty($form->allowed_roles)
     ? array_map('trim', explode(',', $form->allowed_roles))
@@ -86,10 +108,11 @@ if (is_array($access_error)) {
 
 
 
-
 /**
+ * // User Entries View
  * $id shortcode 
  * [pfb_form id="2"]
+ * 
  */
 $fields = $wpdb->get_results(
     $wpdb->prepare(
@@ -154,12 +177,20 @@ if (!empty($_GET['pfb_errors'])) {
                     case 'number':
                     case 'url':
                         ?>
-                        <input
-                            type="<?php echo esc_attr($f->type); ?>"
-                            name="<?php echo esc_attr($f->name); ?>"
-                            <?php echo !empty($f->required) ? 'required' : ''; ?>
-                            class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
-                        >
+                       <?php
+                            $value = ($is_edit && isset($existing_meta[$f->name]))
+                                ? esc_attr($existing_meta[$f->name])
+                                : '';
+                            ?>
+
+                            <input
+                                type="<?php echo esc_attr($f->type); ?>"
+                                name="<?php echo esc_attr($f->name); ?>"
+                                value="<?php echo $value; ?>"
+                                <?php echo !empty($f->required) ? 'required' : ''; ?>
+                                class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
+                            >
+
                         <?php
                         break;
 
@@ -169,7 +200,10 @@ if (!empty($_GET['pfb_errors'])) {
                             name="<?php echo esc_attr($f->name); ?>" 
                             <?php echo !empty($f->required) ? 'required' : ''; ?>
                             class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
-                        ></textarea>
+                        ><?php
+                            echo esc_textarea($existing_meta[$f->name] ?? '');
+                        ?></textarea>
+
                         <?php
                         break;
 
@@ -181,9 +215,13 @@ if (!empty($_GET['pfb_errors'])) {
                             class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
                             >
                             
-                            <option value="">Select</option>
+                            <option value="" <?php selected(empty($existing_meta[$f->name])); ?>>
+                                Select
+                            </option>
                             <?php foreach ($options as $opt): ?>
-                                <option value="<?php echo esc_attr($opt); ?>">
+                                <option value="<?php echo esc_attr($opt); ?>"
+                                    <?php selected(($existing_meta[$f->name] ?? '') === $opt); ?>
+                                >
                                     <?php echo esc_html($opt); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -200,9 +238,9 @@ if (!empty($_GET['pfb_errors'])) {
                                     type="radio"
                                     name="<?php echo esc_attr($f->name); ?>"
                                     value="<?php echo esc_attr($opt); ?>"
-                                    <?php echo !empty($f->required) ? 'required' : ''; ?>
-                                    class="<?php echo $has_error ? 'pfb-error-input' : ''; ?>"
+                                    <?php checked(($existing_meta[$f->name] ?? '') === $opt); ?>
                                 >
+
                                 <?php echo esc_html($opt); ?>
                             </label>
                         <?php
@@ -242,7 +280,13 @@ if (!empty($_GET['pfb_errors'])) {
                                 >
 
 
-                                <div class="pfb-preview" id="pfb-preview-<?php echo esc_attr($f->name); ?>"></div>
+                                <div class="pfb-preview" id="pfb-preview-<?php echo esc_attr($f->name); ?>">
+                                    <?php if ($is_edit && !empty($existing_meta[$f->name])): ?>
+                                        <div class="pfb-image-preview existing">
+                                            <img src="<?php echo esc_url($existing_meta[$f->name]); ?>" />
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                             <?php if (in_array($f->type, ['image','file'])): ?>
                                 <?php if (!empty($f->file_types) || !empty($f->max_size)): ?>
@@ -268,50 +312,53 @@ if (!empty($_GET['pfb_errors'])) {
         </div>
     <?php endforeach; ?>
 
-    <button type="submit">Submit</button>
+    <button type="submit">
+        <?php echo $is_edit ? 'Update Profile' : 'Submit'; ?>
+    </button>
+
 </form>
 
 
 <!-- User Entries View-->
  <?php 
-    $is_view = isset($_GET['pfb_view'], $_GET['entry_id']);
-    $entry_id = $is_view ? intval($_GET['entry_id']) : 0;
+    // $is_view = isset($_GET['pfb_view'], $_GET['entry_id']);
+    // $entry_id = $is_view ? intval($_GET['entry_id']) : 0;
 
-    if ($is_view) {
+    // if ($is_view) {
 
-        if (!pfb_user_can_edit_entry($entry_id, $id)) {
-            echo '<div class="pfb-access-denied">You cannot view this entry.</div>';
-            return;
-        }
+    //     if (!pfb_user_can_edit_entry($entry_id, $id)) {
+    //         echo '<div class="pfb-access-denied">You cannot view this entry.</div>';
+    //         return;
+    //     }
 
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT field_name, field_value
-                FROM {$wpdb->prefix}pfb_entry_meta
-                WHERE entry_id = %d",
-                $entry_id
-            )
-        );
+    //     $rows = $wpdb->get_results(
+    //         $wpdb->prepare(
+    //             "SELECT field_name, field_value
+    //             FROM {$wpdb->prefix}pfb_entry_meta
+    //             WHERE entry_id = %d",
+    //             $entry_id
+    //         )
+    //     );
 
-        echo '<div class="pfb-entry-view">';
-        echo '<h3>Your Submission</h3>';
+    //     echo '<div class="pfb-entry-view">';
+    //     echo '<h3>Your Submission</h3>';
 
-        foreach ($rows as $row) {
-            echo '<p><strong>' . esc_html($row->field_name) . '</strong>: ';
-            echo esc_html($row->field_value) . '</p>';
-        }
+    //     foreach ($rows as $row) {
+    //         echo '<p><strong>' . esc_html($row->field_name) . '</strong>: ';
+    //         echo esc_html($row->field_value) . '</p>';
+    //     }
 
-        // EDIT BUTTON
-        echo '<a class="pfb-edit-btn" href="' . esc_url(
-            add_query_arg(
-                ['pfb_edit' => 1, 'entry_id' => $entry_id],
-                get_permalink()
-            )
-        ) . '">Edit Entry</a>';
+    //     // EDIT BUTTON
+    //     echo '<a class="pfb-edit-btn" href="' . esc_url(
+    //         add_query_arg(
+    //             ['pfb_edit' => 1, 'entry_id' => $entry_id],
+    //             get_permalink()
+    //         )
+    //     ) . '">Edit Entry</a>';
 
-        echo '</div>';
-        return;
-    }
+    //     echo '</div>';
+    //     return;
+    // }
  ?>
 
 

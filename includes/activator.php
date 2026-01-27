@@ -1,4 +1,6 @@
 <?php
+if (!defined('ABSPATH')) exit;
+
 function pfb_activate() {
     global $wpdb;
     $charset = $wpdb->get_charset_collate();
@@ -6,17 +8,19 @@ function pfb_activate() {
 
     // Forms table
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_forms (
-        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
         name VARCHAR(200),
 
         access_type VARCHAR(50) DEFAULT 'all',
         allowed_roles TEXT NULL,
         redirect_type VARCHAR(50) DEFAULT 'message',
-        redirect_page BIGINT DEFAULT 0,
+        redirect_page BIGINT(20) DEFAULT 0,
         allow_user_edit TINYINT(1) DEFAULT 0,
 
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY  (id)
     ) $charset;");
+
 
     // Fields table
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_fields (
@@ -40,8 +44,10 @@ function pfb_activate() {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         form_id BIGINT,
         user_id BIGINT,
+        allow_update TINYINT(1) DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) $charset;");
+
 
     // Entry meta
     dbDelta("CREATE TABLE {$wpdb->prefix}pfb_entry_meta (

@@ -200,234 +200,234 @@ function pfb_handle_delete_field() {
 
 
 
-add_action('admin_post_nopriv_pfb_submit_form', 'pfb_handle_form_submit');
-add_action('admin_post_pfb_submit_form', 'pfb_handle_form_submit');
-function pfb_handle_form_submit() {
+// add_action('admin_post_nopriv_pfb_submit_form', 'pfb_handle_form_submit');
+// add_action('admin_post_pfb_submit_form', 'pfb_handle_form_submit');
+// function pfb_handle_form_submit() {
 
-    if (
-        !isset($_POST['pfb_nonce']) ||
-        !wp_verify_nonce($_POST['pfb_nonce'], 'pfb_frontend_submit')
-    ) {
-        wp_die('Security check failed');
-    }
+//     if (
+//         !isset($_POST['pfb_nonce']) ||
+//         !wp_verify_nonce($_POST['pfb_nonce'], 'pfb_frontend_submit')
+//     ) {
+//         wp_die('Security check failed');
+//     }
 
-    global $wpdb;
+//     global $wpdb;
 
-    $form_id = intval($_POST['pfb_form_id'] ?? 0);
-    if (!$form_id) wp_die('Invalid form');
+//     $form_id = intval($_POST['pfb_form_id'] ?? 0);
+//     if (!$form_id) wp_die('Invalid form');
 
-    $user_id = is_user_logged_in() ? get_current_user_id() : null;
+//     $user_id = is_user_logged_in() ? get_current_user_id() : null;
 
-    $fields = $wpdb->get_results(
-        $wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}pfb_fields WHERE form_id=%d",
-            $form_id
-        )
-    );
+//     $fields = $wpdb->get_results(
+//         $wpdb->prepare(
+//             "SELECT * FROM {$wpdb->prefix}pfb_fields WHERE form_id=%d",
+//             $form_id
+//         )
+//     );
 
-    $errors = [];
+//     $errors = [];
 
-    /* ========= REQUIRED CHECK ========= */
-    foreach ($fields as $f) {
+//     /* ========= REQUIRED CHECK ========= */
+//     foreach ($fields as $f) {
 
-        // file / imagea
-        if (in_array($f->type, ['file','image'])) {
+//         // file / imagea
+//         if (in_array($f->type, ['file','image'])) {
 
-            $file = $_FILES[$f->name] ?? null;
+//             $file = $_FILES[$f->name] ?? null;
 
-            if (!empty($f->required) && empty($file['name'])) {
-                $errors[$f->name] = $f->label . ' is required';
-                continue;
-            }
+//             if (!empty($f->required) && empty($file['name'])) {
+//                 $errors[$f->name] = $f->label . ' is required';
+//                 continue;
+//             }
 
-            if (!empty($file['name'])) {
+//             if (!empty($file['name'])) {
 
-                $allowed_types = !empty($f->file_types)
-                    ? array_map('trim', explode(',', strtolower($f->file_types)))
-                    : [];
+//                 $allowed_types = !empty($f->file_types)
+//                     ? array_map('trim', explode(',', strtolower($f->file_types)))
+//                     : [];
 
-                $max_size = !empty($f->max_size) ? $f->max_size * 1024 * 1024 : 0;
-                $min_size = !empty($f->min_size) ? $f->min_size * 1024 * 1024 : 0;
-
-
-                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                $size = $file['size'];
-
-                if ($allowed_types && !in_array($ext, $allowed_types)) {
-                    $errors[$f->name] = $f->label . ' invalid file type';
-                }
-
-                if ($max_size && $size > $max_size) {
-                    $errors[$f->name] = $f->label . ' exceeds max size';
-                }
-
-                if ($min_size && $size < $min_size) {
-                    $errors[$f->name] = $f->label . ' file too small';
-                }
-            }
-
-            continue;
-        }
+//                 $max_size = !empty($f->max_size) ? $f->max_size * 1024 * 1024 : 0;
+//                 $min_size = !empty($f->min_size) ? $f->min_size * 1024 * 1024 : 0;
 
 
-        if (!isset($_POST[$f->name])) {
-            if (!empty($f->required)) {
-                $errors[$f->name] = $f->label . ' is required';
-            }
-            continue;
-        }
+//                 $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+//                 $size = $file['size'];
 
-        if (!empty($f->required) && trim($_POST[$f->name]) === '') {
-            $errors[$f->name] = $f->label . ' is required';
-        }
-    }
+//                 if ($allowed_types && !in_array($ext, $allowed_types)) {
+//                     $errors[$f->name] = $f->label . ' invalid file type';
+//                 }
 
-    // Error Message
-    if ($errors) {
+//                 if ($max_size && $size > $max_size) {
+//                     $errors[$f->name] = $f->label . ' exceeds max size';
+//                 }
 
-        $error_payload = urlencode(wp_json_encode($errors));
+//                 if ($min_size && $size < $min_size) {
+//                     $errors[$f->name] = $f->label . ' file too small';
+//                 }
+//             }
 
-        $redirect_url = wp_get_referer() ?: home_url();
-
-        wp_redirect(
-            add_query_arg('pfb_errors', $error_payload, $redirect_url)
-        );
-        exit;
-    }
+//             continue;
+//         }
 
 
+//         if (!isset($_POST[$f->name])) {
+//             if (!empty($f->required)) {
+//                 $errors[$f->name] = $f->label . ' is required';
+//             }
+//             continue;
+//         }
+
+//         if (!empty($f->required) && trim($_POST[$f->name]) === '') {
+//             $errors[$f->name] = $f->label . ' is required';
+//         }
+//     }
+
+//     // Error Message
+//     if ($errors) {
+
+//         $error_payload = urlencode(wp_json_encode($errors));
+
+//         $redirect_url = wp_get_referer() ?: home_url();
+
+//         wp_redirect(
+//             add_query_arg('pfb_errors', $error_payload, $redirect_url)
+//         );
+//         exit;
+//     }
 
 
-    /* ========= CREATE ENTRY ========= */
-    $entry_id = null;
 
-    // if logged-in user -> checked has entry
-    if ($user_id) {
-        $entry_id = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}pfb_entries 
-                WHERE form_id = %d AND user_id = %d",
-                $form_id,
-                $user_id
-            )
-        );
-    }
 
-    
+//     /* ========= CREATE ENTRY ========= */
+//     $entry_id = null;
 
-    // get form settings
-    $form = $wpdb->get_row(
-        $wpdb->prepare(
-            "SELECT allow_user_edit FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
-            $form_id
-        )
-    );
-
-    // if entry exists & editing not allowed
-    if ($entry_id && (empty($form) || empty($form->allow_user_edit)))  {
-
-        $redirect_url = wp_get_referer() ?: home_url();
-
-        wp_redirect(
-            add_query_arg(
-                'pfb_errors',
-                urlencode(wp_json_encode(['form' => 'You have already submitted this form.'])),
-                $redirect_url
-            )
-        );
-        exit;
-    }
+//     // if logged-in user -> checked has entry
+//     if ($user_id) {
+//         $entry_id = $wpdb->get_var(
+//             $wpdb->prepare(
+//                 "SELECT id FROM {$wpdb->prefix}pfb_entries 
+//                 WHERE form_id = %d AND user_id = %d",
+//                 $form_id,
+//                 $user_id
+//             )
+//         );
+//     }
 
     
-    // if no entry  → INSERT
-    if (!$entry_id) {
 
-        $wpdb->insert(
-            "{$wpdb->prefix}pfb_entries",
-            [
-                'form_id' => $form_id,
-                'user_id' => $user_id
-            ]
-        );
+//     // get form settings
+//     $form = $wpdb->get_row(
+//         $wpdb->prepare(
+//             "SELECT allow_user_edit FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
+//             $form_id
+//         )
+//     );
 
-        $entry_id = $wpdb->insert_id;
+//     // if entry exists & editing not allowed
+//     if ($entry_id && (empty($form) || empty($form->allow_user_edit)))  {
 
-    } else {
+//         $redirect_url = wp_get_referer() ?: home_url();
 
-        // UPDATE MODE 
-        $wpdb->delete(
-            "{$wpdb->prefix}pfb_entry_meta",
-            ['entry_id' => $entry_id]
-        );
-    }
+//         wp_redirect(
+//             add_query_arg(
+//                 'pfb_errors',
+//                 urlencode(wp_json_encode(['form' => 'You have already submitted this form.'])),
+//                 $redirect_url
+//             )
+//         );
+//         exit;
+//     }
 
+    
+//     // if no entry  → INSERT
+//     if (!$entry_id) {
 
-    /* ========= SAVE META ========= */
-    foreach ($fields as $f) {
-        // FILE / IMAGE
-        if (in_array($f->type, ['file','image']) && !empty($_FILES[$f->name]['name'])) {
+//         $wpdb->insert(
+//             "{$wpdb->prefix}pfb_entries",
+//             [
+//                 'form_id' => $form_id,
+//                 'user_id' => $user_id
+//             ]
+//         );
 
-            require_once ABSPATH . 'wp-admin/includes/file.php';
-            $upload = wp_handle_upload($_FILES[$f->name], ['test_form' => false]);
+//         $entry_id = $wpdb->insert_id;
 
-            if (!empty($upload['url'])) {
-                $wpdb->insert(
-                    $wpdb->prefix . 'pfb_entry_meta',
-                    [
-                        'entry_id'   => $entry_id,
-                        'field_name' => $f->name,
-                        'field_value'=> esc_url_raw($upload['url'])
-                    ]
-                );
-            }
-            continue;
-        }
+//     } else {
 
-
-        // NORMAL FIELD
-        // if (isset($_POST[$f->name])) {
-        //     $wpdb->insert(
-        //         $wpdb->prefix . 'pfb_entry_meta',
-        //         [
-        //             'entry_id'   => $entry_id,
-        //             'field_name' => $f->name,
-        //             'field_value'=> sanitize_text_field($_POST[$f->name])
-        //         ]
-        //     );
-        // }
-        $value = null;
-
-        // Admin edit (fields[name])
-        if (isset($_POST['fields'][$f->name])) {
-            $value = $_POST['fields'][$f->name];
-        }
-        // Frontend submit (legacy)
-        elseif (isset($_POST[$f->name])) {
-            $value = $_POST[$f->name];
-        }
-
-        if ($value !== null) {
-            $wpdb->insert(
-                $wpdb->prefix . 'pfb_entry_meta',
-                [
-                    'entry_id'   => $entry_id,
-                    'field_name' => $f->name,
-                    'field_value'=> sanitize_text_field($value)
-                ]
-            );
-        }
+//         // UPDATE MODE 
+//         $wpdb->delete(
+//             "{$wpdb->prefix}pfb_entry_meta",
+//             ['entry_id' => $entry_id]
+//         );
+//     }
 
 
-    }
+//     /* ========= SAVE META ========= */
+//     foreach ($fields as $f) {
+//         // FILE / IMAGE
+//         if (in_array($f->type, ['file','image']) && !empty($_FILES[$f->name]['name'])) {
 
-    $redirect_url = remove_query_arg(['pfb_errors'], wp_get_referer());
+//             require_once ABSPATH . 'wp-admin/includes/file.php';
+//             $upload = wp_handle_upload($_FILES[$f->name], ['test_form' => false]);
 
-    wp_redirect(
-        add_query_arg('pfb_success', '1', $redirect_url)
-    );
-    exit;
+//             if (!empty($upload['url'])) {
+//                 $wpdb->insert(
+//                     $wpdb->prefix . 'pfb_entry_meta',
+//                     [
+//                         'entry_id'   => $entry_id,
+//                         'field_name' => $f->name,
+//                         'field_value'=> esc_url_raw($upload['url'])
+//                     ]
+//                 );
+//             }
+//             continue;
+//         }
 
-}
+
+//         // NORMAL FIELD
+//         // if (isset($_POST[$f->name])) {
+//         //     $wpdb->insert(
+//         //         $wpdb->prefix . 'pfb_entry_meta',
+//         //         [
+//         //             'entry_id'   => $entry_id,
+//         //             'field_name' => $f->name,
+//         //             'field_value'=> sanitize_text_field($_POST[$f->name])
+//         //         ]
+//         //     );
+//         // }
+//         $value = null;
+
+//         // Admin edit (fields[name])
+//         if (isset($_POST['fields'][$f->name])) {
+//             $value = $_POST['fields'][$f->name];
+//         }
+//         // Frontend submit (legacy)
+//         elseif (isset($_POST[$f->name])) {
+//             $value = $_POST[$f->name];
+//         }
+
+//         if ($value !== null) {
+//             $wpdb->insert(
+//                 $wpdb->prefix . 'pfb_entry_meta',
+//                 [
+//                     'entry_id'   => $entry_id,
+//                     'field_name' => $f->name,
+//                     'field_value'=> sanitize_text_field($value)
+//                 ]
+//             );
+//         }
+
+
+//     }
+
+//     $redirect_url = remove_query_arg(['pfb_errors'], wp_get_referer());
+
+//     wp_redirect(
+//         add_query_arg('pfb_success', '1', $redirect_url)
+//     );
+//     exit;
+
+// }
 
 
 

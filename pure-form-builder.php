@@ -10,17 +10,21 @@ if (!defined('ABSPATH')) exit;
 define('PFB_PATH', plugin_dir_path(__FILE__));
 define('PFB_URL', plugin_dir_url(__FILE__));
 
+/**
+ * Activation
+ */
 require_once PFB_PATH . 'includes/activator.php';
+register_activation_hook(__FILE__, 'pfb_activate');
+
+/**
+ * Runtime includes (NOT for activation)
+ */
 require_once PFB_PATH . 'admin/menu.php';
 require_once PFB_PATH . 'public/shortcode.php';
 require_once PFB_PATH . 'includes/ajax-save.php';
 require_once PFB_PATH . 'includes/admin-actions.php';
 require_once PFB_PATH . 'includes/helpers.php';
-
-
-
-
-register_activation_hook(__FILE__, 'pfb_activate');
+require_once PFB_PATH . 'includes/submit-handler.php';
 
 
 add_action('wp_enqueue_scripts', function () {

@@ -6,8 +6,10 @@ add_shortcode('pfb_form', function ($atts) {
     global $wpdb;
 
     $atts = shortcode_atts([
-        'id' => 0
+        'id'       => 0,
+        'entry_id' => 0
     ], $atts);
+
 
     $form_id = intval($atts['id']);
     if (!$form_id) return '';
@@ -65,9 +67,19 @@ function pfb_render_my_entry($atts) {
     global $wpdb;
 
     $form_id = intval($atts['form_id'] ?? 0);
+
+    // AUTO DETECT FROM PAGE META
     if (!$form_id) {
-        return '<p>Invalid form.</p>';
+        $page_id = get_queried_object_id();
+        if ($page_id) {
+            $form_id = intval(get_post_meta($page_id, 'pfb_form_id', true));
+        }
     }
+
+    if (!$form_id) {
+        return '<p>Form not assigned to this page.</p>';
+    }
+
 
     $user_id = get_current_user_id();
 
@@ -88,8 +100,25 @@ function pfb_render_my_entry($atts) {
 
     // View / Edit mode
     if (isset($_GET['edit']) && $_GET['edit'] == 1) {
-        return do_shortcode('[pfb_form id="'.$form_id.'" edit="1" entry_id="'.$entry_id.'"]');
+
+        // SECURITY: verify ownership
+        $owner = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT user_id FROM {$wpdb->prefix}pfb_entries WHERE id = %d",
+                $entry_id
+            )
+        );
+
+        if ((int)$owner !== get_current_user_id()) {
+            return '<p>You are not allowed to edit this profile.</p>';
+        }
+
+        return do_shortcode(
+            '[pfb_form id="'.$form_id.'" entry_id="'.$entry_id.'"]'
+        );
     }
+
+
 
     // Default → show entry details
     return pfb_render_entry_view($entry_id, $form_id);
@@ -160,21 +189,14 @@ if (!function_exists('pfb_render_entry_view')) {
 
             </div>
 
-            <a class="pfb-edit-btn" href="<?php echo esc_url(add_query_arg('edit', 1)); ?>">
+            <a class="pfb-edit-btn" href="<?php echo esc_url(
+                add_query_arg('edit', 1)
+            ); ?>">
                 ✏️ Edit Profile
             </a>
+
         </div>
         <?php
         return ob_get_clean();
     }
-}
-
-
-
-
-// View / Edit mode
-if (isset($_GET['edit']) && $_GET['edit'] == 1) {
-    return do_shortcode(
-        '[pfb_form id="'.$form_id.'" edit="1" entry_id="'.$entry_id.'"]'
-    );
 }

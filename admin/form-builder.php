@@ -256,8 +256,7 @@ if ($form_id) {
                 </tr>
 
 
-                 
-
+                
                 <tr class="pfb-file-only" style="display:none;">
                     <th>Allowed File Types</th>
                     <td>
