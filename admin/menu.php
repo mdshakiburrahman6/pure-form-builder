@@ -1,6 +1,12 @@
 <?php
+// Exit if accessed directly
 if (!defined('ABSPATH')) exit;
 
+/**
+ * 
+ * Register Admin Menu and Submenus
+ * 
+ */
 add_action('admin_menu', 'pfb_register_admin_menu');
 
 function pfb_register_admin_menu() {
@@ -71,7 +77,7 @@ function pfb_register_admin_menu() {
 
     // From Setting
        add_submenu_page(
-        'pfb-forms',                
+        null, // Hidden page                
         'Form Settings',
         'Settings',
         'manage_options',
@@ -94,22 +100,22 @@ function pfb_register_admin_menu() {
 
 
 
-
 /* CALLBACKS */
-
 function pfb_forms_list() {
     include PFB_PATH . 'admin/forms-list.php';
 }
 
+// Form Builder Page
 function pfb_form_builder_page() {
     include PFB_PATH . 'admin/form-builder.php';
 }
 
+// Entries Page
 function pfb_render_entries() {
     include PFB_PATH . 'admin/entries.php';
 }
 
-
+// Form Settings Page
 function pfb_render_form_settings() {
 
     if (!current_user_can('manage_options')) {
@@ -119,7 +125,7 @@ function pfb_render_form_settings() {
     require_once PFB_PATH . '/admin/form-settings.php';
 }
 
-
+// Single Entry View Page
 function pfb_render_entry_view_admin() {
-        require_once PFB_PATH . 'admin/entry-view.php';
-    }
+    require_once PFB_PATH . 'admin/entry-view.php';
+}

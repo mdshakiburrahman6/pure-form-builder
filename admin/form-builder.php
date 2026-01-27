@@ -243,7 +243,8 @@ if ($form_id) {
                             if (!empty($edit_field->options)) {
                                 $opts = json_decode($edit_field->options, true);
                                 if (is_array($opts)) {
-                                    echo esc_textarea(implode("\n", $opts));
+                                    // echo esc_textarea(implode("\n", $opts));
+                                    echo esc_textarea(implode(', ', $opts));
                                 }
                             }
                         ?></textarea>

@@ -313,6 +313,32 @@ function pfb_handle_form_submit() {
         );
     }
 
+    
+
+    // get form settings
+    $form = $wpdb->get_row(
+        $wpdb->prepare(
+            "SELECT allow_user_edit FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
+            $form_id
+        )
+    );
+
+    // if entry exists & editing not allowed
+    if ($entry_id && (empty($form) || empty($form->allow_user_edit)))  {
+
+        $redirect_url = wp_get_referer() ?: home_url();
+
+        wp_redirect(
+            add_query_arg(
+                'pfb_errors',
+                urlencode(wp_json_encode(['form' => 'You have already submitted this form.'])),
+                $redirect_url
+            )
+        );
+        exit;
+    }
+
+    
     // if no entry  → INSERT
     if (!$entry_id) {
 
@@ -335,30 +361,6 @@ function pfb_handle_form_submit() {
         );
     }
 
-    // get form settings
-    $form = $wpdb->get_row(
-        $wpdb->prepare(
-            "SELECT allow_user_edit FROM {$wpdb->prefix}pfb_forms WHERE id = %d",
-            $form_id
-        )
-    );
-
-    // if entry exists & editing not allowed
-    if ($entry_id && empty($form->allow_user_edit)) {
-
-        $redirect_url = wp_get_referer() ?: home_url();
-
-        wp_redirect(
-            add_query_arg(
-                'pfb_errors',
-                urlencode(wp_json_encode(['form' => 'You have already submitted this form.'])),
-                $redirect_url
-            )
-        );
-        exit;
-    }
-
-    
 
     /* ========= SAVE META ========= */
     foreach ($fields as $f) {
